@@ -68,22 +68,28 @@ struct ContentView:  View {
     // MARK: - Animated Background
 
     struct AnimatedBackground: View {
-        @State private var animateGradient = false
-
         var body: some View {
-            LinearGradient(
-                colors: [
-                    Color.black,
-                    Color.blue.opacity(0.3),
-                    Color.purple.opacity(0.2),
-                    Color.black
-                ],
-                startPoint:  animateGradient ? .topLeading : .bottomLeading,
-                endPoint: animateGradient ? .bottomTrailing : .topTrailing
-            )
-            .onAppear {
-                withAnimation(.easeInOut(duration: 5.0).repeatForever(autoreverses: true)) {
-                    animateGradient.toggle()
+            ZStack {
+                // 静态深色背景
+                LinearGradient(
+                    colors:  [
+                        Color(red: 0.05, green: 0.05, blue: 0.15),
+                        Color.black,
+                        Color(red: 0.1, green: 0.05, blue: 0.15)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                
+                // 添加一些静态"星星"
+                ForEach(0..<30, id: \.self) { _ in
+                    Circle()
+                        .fill(Color.white.opacity(Double.random(in: 0.3...0.6)))
+                        .frame(width: CGFloat.random(in: 1...3))
+                        .position(
+                            x: CGFloat.random(in: 0...UIScreen.main.bounds.width),
+                            y: CGFloat.random(in: 0...UIScreen.main.bounds.height)
+                        )
                 }
             }
         }
