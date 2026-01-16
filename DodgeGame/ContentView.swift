@@ -97,7 +97,7 @@ struct ContentView:  View {
 
     // MARK: - Game Canvas
 
-    private func gameCanvas(size:  CGSize) -> some View {
+    private func gameCanvas(size: CGSize) -> some View {
         ZStack {
             // 障碍物
             ForEach(engine.obstacles) { obs in
@@ -106,29 +106,29 @@ struct ContentView:  View {
 
             // Powerups
             ForEach(engine.powerups) { powerup in
-                PowerupView(powerup: powerup)
+                PowerupView(powerup:  powerup)
             }
 
             // 玩家
             PlayerView(
                 player: engine.player,
-                hasShield: engine.hasShield,
+                hasShield:  engine.hasShield,
                 hasMagnet: engine.hasMagnet
             )
         }
         .contentShape(Rectangle())
         .gesture(
-            DragGesture(minimumDistance: 0)
+            DragGesture(minimumDistance: 5)
                 .onChanged { value in
                     engine.setPlayerX(value.location.x)
                 }
         )
         .overlay(alignment: .bottom) {
-            Text("Drag anywhere to move")
-                .font(. caption)
-                .foregroundStyle(.white.opacity(0.6))
-                .padding(.bottom, 22)
-                .opacity(engine.state == .playing ?  1 : 0)
+            Text("Drag to move")
+                .font(.caption)
+                .foregroundStyle(. white.opacity(0.6))
+                .padding(. bottom, 22)
+                .opacity(engine.state == .playing ? 1 : 0)
         }
     }
 
