@@ -12,7 +12,7 @@ struct ContentView:  View {
         GeometryReader { geo in
             ZStack {
                 // 背景 with animated gradient
-                AnimatedBackground()
+                AnimatedBackground(theme: engine.themeManager.selectedBackgroundTheme)
                     .ignoresSafeArea()
 
                 // 游戏画布区域
@@ -95,23 +95,21 @@ struct ContentView:  View {
     // MARK: - Animated Background
 
     struct AnimatedBackground: View {
+        let theme: BackgroundTheme
+        
         var body: some View {
             ZStack {
-                // 静态深色背景
+                // Themed gradient background
                 LinearGradient(
-                    colors:  [
-                        Color(red: 0.05, green: 0.05, blue: 0.15),
-                        Color.black,
-                        Color(red: 0.1, green: 0.05, blue: 0.15)
-                    ],
+                    colors: theme.gradientColors,
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 
-                // 添加一些静态"星星"
+                // Themed stars
                 ForEach(0..<30, id: \.self) { _ in
                     Circle()
-                        .fill(Color.white.opacity(Double.random(in: 0.3...0.6)))
+                        .fill(theme.starColor.opacity(Double.random(in: 0.3...0.6)))
                         .frame(width: CGFloat.random(in: 1...3))
                         .position(
                             x: CGFloat.random(in: 0...UIScreen.main.bounds.width),
@@ -128,7 +126,11 @@ struct ContentView:  View {
         ZStack {
             // Obstacles
             ForEach(engine.obstacles) { obs in
-                ObstacleView(obstacle: obs, isFrozen: engine.hasFreeze)
+                ObstacleView(
+                    obstacle: obs,
+                    isFrozen: engine.hasFreeze,
+                    theme: engine.themeManager.selectedObstacleTheme
+                )
             }
 
             // Powerups
@@ -143,7 +145,8 @@ struct ContentView:  View {
                 hasMagnet: engine.hasMagnet,
                 hasSpeedBoost: engine.hasSpeedBoost,
                 hasFreeze: engine.hasFreeze,
-                playerColor: engine.currentPlayerColor
+                playerColor: engine.currentPlayerColor,
+                trailEffect: engine.themeManager.selectedTrailEffect
             )
         }
         .contentShape(Rectangle())
@@ -171,10 +174,11 @@ struct ContentView:  View {
         let hasSpeedBoost: Bool
         let hasFreeze: Bool
         let playerColor: Color
+        let trailEffect: TrailEffect
 
         @State private var pulseShield = false
         @State private var rotateMagnet = false
-        @State private var speedTrail = false
+        @State private var diamondGlow = false
 
         var body: some View {
             ZStack {
@@ -232,6 +236,27 @@ struct ContentView:  View {
                         .stroke(Color.blue.opacity(0.5), lineWidth: 3)
                         .frame(width: player.radius * 2 + 20, height: player.radius * 2 + 20)
                 }
+                
+                // Diamond trail effect indicator
+                if trailEffect == .diamond {
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.cyan, .white, .cyan],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                        .frame(width: player.radius * 2 + 24, height: player.radius * 2 + 24)
+                        .scaleEffect(diamondGlow ? 1.1 : 1.0)
+                        .opacity(diamondGlow ? 0.5 : 0.8)
+                        .onAppear {
+                            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                                diamondGlow = true
+                            }
+                        }
+                }
 
                 // Player ball with gradient
                 Circle()
@@ -244,7 +269,11 @@ struct ContentView:  View {
                         )
                     )
                     .frame(width: player.radius * 2, height: player.radius * 2)
-                    .shadow(color: hasShield ? .cyan : (hasSpeedBoost ? .green : playerColor.opacity(0.5)), radius: hasShield ? 15 : 10, y: 6)
+                    .shadow(
+                        color: hasShield ? .cyan : (hasSpeedBoost ? .green : (trailEffect == .diamond ? .cyan : playerColor.opacity(0.5))),
+                        radius: hasShield ? 15 : (trailEffect == .diamond ? 12 : 10),
+                        y: 6
+                    )
             }
             .position(x: player.x, y: player.y)
         }
@@ -255,27 +284,28 @@ struct ContentView:  View {
     struct ObstacleView: View {
         let obstacle: Obstacle
         let isFrozen: Bool
+        let theme: ObstacleTheme
 
         var body: some View {
             ZStack {
                 // Glow effect
                 Circle()
-                    .fill((isFrozen ? Color.blue : Color.red).opacity(0.3))
+                    .fill((isFrozen ? Color.blue : theme.glowColor).opacity(0.3))
                     .frame(width: obstacle.radius * 2.5, height: obstacle.radius * 2.5)
                     .blur(radius: 8)
 
-                // Main obstacle
+                // Main obstacle with theme colors
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: isFrozen ? [.blue, .blue.opacity(0.7)] : [.red, .red.opacity(0.7)],
+                            colors: isFrozen ? [.blue, .blue.opacity(0.7)] : theme.colors,
                             center: .topLeading,
                             startRadius: 0,
                             endRadius: obstacle.radius * 2
                         )
                     )
                     .frame(width: obstacle.radius * 2, height: obstacle.radius * 2)
-                    .shadow(color: (isFrozen ? Color.blue : Color.red).opacity(0.5), radius: 6, y: 3)
+                    .shadow(color: (isFrozen ? Color.blue : theme.glowColor).opacity(0.5), radius: 6, y: 3)
             }
             .position(x: obstacle.x, y: obstacle.y)
         }
@@ -329,12 +359,25 @@ struct ContentView:  View {
     // MARK: - Particles Layer
 
     private var particlesLayer: some View {
-        ForEach(engine.particles) { particle in
-            Circle()
-                .fill(particle.color)
-                .frame(width: particle.size, height: particle.size)
-                .position(x: particle.x, y: particle.y)
-                .opacity(particle.opacity)
+        ZStack {
+            // Trail particles (rendered first, behind regular particles)
+            ForEach(engine.trailParticles) { trail in
+                Circle()
+                    .fill(trail.color)
+                    .frame(width: trail.size * 2, height: trail.size * 2)
+                    .position(x: trail.x, y: trail.y)
+                    .opacity(trail.opacity)
+                    .blur(radius: 2)
+            }
+            
+            // Regular particles (explosions, auras, combo effects)
+            ForEach(engine.particles) { particle in
+                Circle()
+                    .fill(particle.color)
+                    .frame(width: particle.size, height: particle.size)
+                    .position(x: particle.x, y: particle.y)
+                    .opacity(particle.opacity)
+            }
         }
     }
 
@@ -674,6 +717,9 @@ struct ContentView:  View {
                 
                 // Player Color Selection with glass effect
                 PlayerColorGrid(engine: engine)
+                
+                // Theme Selection
+                ThemeSelector(engine: engine)
                 
                 // Done button
                 doneButton
