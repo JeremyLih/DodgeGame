@@ -84,6 +84,10 @@ struct ContentView:  View {
                     scorePopupOffset = -40
                     scorePopupOpacity = 0
                 }
+                // Reset after animation completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    engine.recentScoreIncrease = 0
+                }
             }
         }
     }

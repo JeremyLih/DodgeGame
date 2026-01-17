@@ -228,6 +228,7 @@ final class GameEngine: ObservableObject {
         currentDifficultyLevel = 0
         difficultyJustIncreased = false
         lastScoreMilestone = 0
+        recentScoreIncrease = 0
         obstacleSpawnInterval = baseSpawnInterval
         powerupSpawnInterval = 2.5
         obstacleSpawnCooldown = 0
@@ -616,9 +617,12 @@ final class GameEngine: ObservableObject {
     
     // MARK: - Milestone System
     
+    // Track which coin milestones have been achieved
+    private let coinMilestones: Set<Int> = [10, 25, 50, 100, 250, 500]
+    
     private func checkMilestone(coins: Int) {
-        let milestones = [10, 25, 50, 100, 250, 500]
-        if milestones.contains(coins) {
+        // Check if we just hit a milestone
+        if coinMilestones.contains(coins) {
             showMilestoneNotification("🎯 \(coins) Coins Collected!")
         }
     }
