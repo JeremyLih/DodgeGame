@@ -621,6 +621,7 @@ final class GameEngine: ObservableObject {
     
     // Track which coin milestones have been achieved
     private let coinMilestones: Set<Int> = [10, 25, 50, 100, 250, 500]
+    private let scoreMilestones: [Int] = [100, 250, 500, 1000, 2500, 5000, 10000]
     
     private func checkMilestone(coins: Int) {
         // Check if we just hit a milestone and haven't achieved it yet this game
@@ -631,7 +632,6 @@ final class GameEngine: ObservableObject {
     }
     
     private func checkScoreMilestone(currentScore: Int) {
-        let scoreMilestones = [100, 250, 500, 1000, 2500, 5000, 10000]
         for milestone in scoreMilestones {
             if currentScore >= milestone && lastScoreMilestone < milestone {
                 lastScoreMilestone = milestone

@@ -85,8 +85,8 @@ struct ContentView:  View {
                     scorePopupOpacity = 0
                 }
                 // Reset after animation completes
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    engine.recentScoreIncrease = 0
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak engine] in
+                    engine?.recentScoreIncrease = 0
                 }
             }
         }
