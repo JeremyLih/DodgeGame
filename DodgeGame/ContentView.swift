@@ -154,11 +154,6 @@ struct ContentView:  View {
                     engine.setPlayerX(value.location.x)
                 }
         )
-        .simultaneousGesture(
-            // Tap gesture for destructible obstacles
-            TapGesture()
-                .onEnded { _ in }
-        )
         .onTapGesture { location in
             engine.tapAtLocation(x: location.x, y: location.y)
         }

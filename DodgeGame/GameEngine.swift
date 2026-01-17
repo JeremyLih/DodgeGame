@@ -808,13 +808,10 @@ final class GameEngine: ObservableObject {
             // Split into 2-3 smaller obstacles
             spawnExplosion(at: explosionX, y: explosionY, color: obstacle.property.color, count: 15)
             
-            // Remove the original obstacle
-            if obstacles.indices.contains(index) {
-                obstacles.remove(at: index)
-            }
-            
             let splitCount = Int.random(in: 2...3)
             let newRadius = obstacle.radius * 0.6
+            
+            // Create new obstacles before removing the original
             if newRadius >= GameConstants.obstacleRadiusMin {
                 for i in 0..<splitCount {
                     let angle = CGFloat(i) * (2 * .pi / CGFloat(splitCount))
@@ -833,6 +830,11 @@ final class GameEngine: ObservableObject {
                 }
             }
             
+            // Now remove the original obstacle
+            if obstacles.indices.contains(index) {
+                obstacles.remove(at: index)
+            }
+            
         case .exploding:
             // Create explosion that affects nearby area
             spawnExplosion(at: explosionX, y: explosionY, color: obstacle.property.color, count: 20)
@@ -844,13 +846,14 @@ final class GameEngine: ObservableObject {
             
             // Destroy nearby obstacles
             let explosionRadius: CGFloat = 80
+            let explosionRadiusSquared = explosionRadius * explosionRadius
             var indicesToRemove: [Int] = []
             
             for (idx, other) in obstacles.enumerated() {
                 let dx = other.x - explosionX
                 let dy = other.y - explosionY
-                let dist = sqrt(dx*dx + dy*dy)
-                if dist < explosionRadius && other.id != obstacle.id {
+                let distSquared = dx*dx + dy*dy
+                if distSquared < explosionRadiusSquared && other.id != obstacle.id {
                     spawnExplosion(at: other.x, y: other.y, color: .orange, count: 8)
                     indicesToRemove.append(idx)
                 }
@@ -1444,13 +1447,15 @@ final class GameEngine: ObservableObject {
         guard state == .playing else { return }
         
         // Check if tapped on a destructible obstacle - iterate in reverse to avoid index issues
+        let tapRadiusSquared: CGFloat = 20 * 20
         for index in obstacles.indices.reversed() {
             let obs = obstacles[index]
             let dx = obs.x - x
             let dy = obs.y - y
-            let dist = sqrt(dx*dx + dy*dy)
+            let distSquared = dx*dx + dy*dy
+            let hitRadiusSquared = (obs.radius + 20) * (obs.radius + 20)
             
-            if dist < obs.radius + 20 && obs.property == .destructible {
+            if distSquared < hitRadiusSquared && obs.property == .destructible {
                 // Destroy the obstacle
                 let scoreBonus = 15 * obs.type.scoreMultiplier
                 score += scoreBonus
