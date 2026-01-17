@@ -594,7 +594,7 @@ struct ContentView:  View {
                 .padding(.top, 4)
 
                 Text("Best: \(engine.bestScore)")
-                    . foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.7))
                     .padding(.top, 2)
             }
 

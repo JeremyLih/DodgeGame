@@ -113,8 +113,9 @@ final class GameEngine: ObservableObject {
     @Published var showMilestone: Bool = false
     @Published var milestoneText: String = ""
     
-    // Milestone tracking
+    // Milestone tracking - track which milestones achieved this game
     private var lastScoreMilestone: Int = 0
+    private var achievedCoinMilestones: Set<Int> = []
 
     @Published var player: Player = Player(x: 0, y:  0, radius: 18)
     @Published var obstacles: [Obstacle] = []
@@ -228,6 +229,7 @@ final class GameEngine: ObservableObject {
         currentDifficultyLevel = 0
         difficultyJustIncreased = false
         lastScoreMilestone = 0
+        achievedCoinMilestones.removeAll()
         recentScoreIncrease = 0
         obstacleSpawnInterval = baseSpawnInterval
         powerupSpawnInterval = 2.5
@@ -621,8 +623,9 @@ final class GameEngine: ObservableObject {
     private let coinMilestones: Set<Int> = [10, 25, 50, 100, 250, 500]
     
     private func checkMilestone(coins: Int) {
-        // Check if we just hit a milestone
-        if coinMilestones.contains(coins) {
+        // Check if we just hit a milestone and haven't achieved it yet this game
+        if coinMilestones.contains(coins) && !achievedCoinMilestones.contains(coins) {
+            achievedCoinMilestones.insert(coins)
             showMilestoneNotification("🎯 \(coins) Coins Collected!")
         }
     }
