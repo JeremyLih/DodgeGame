@@ -463,7 +463,10 @@ struct ContentView:  View {
 
     private var hudOverlay: some View {
         HStack(spacing: 8) {
-            hudPill(title: "Score", value: "\(engine.score)", highlight: false)
+            // Score indicator during gameplay
+            if engine.state == .playing {
+                hudPill(title: "Score", value: "\(engine.score)", highlight: false)
+            }
             
             // Lives indicator during gameplay
             if engine.state == .playing {
