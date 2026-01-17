@@ -721,6 +721,9 @@ struct ContentView:  View {
                 // Theme Selection
                 ThemeSelector(engine: engine)
                 
+                // Achievements
+                AchievementsView(engine: engine)
+                
                 // Done button
                 doneButton
             }
