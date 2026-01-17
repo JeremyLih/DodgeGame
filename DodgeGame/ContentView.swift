@@ -308,21 +308,17 @@ struct ContentView:  View {
                     .blur(radius: 8)
 
                 // Main obstacle with theme colors and characteristic color
-                let obstacleColor = isFrozen ? [.blue, .blue.opacity(0.7)] : 
-                                    (obstacle.characteristic == .normal ? theme.colors : 
-                                     [obstacle.characteristic.color, obstacle.characteristic.color.opacity(0.7)])
-                
                 obstacleShape(for: obstacle.shape)
                     .fill(
                         RadialGradient(
-                            colors: obstacleColor,
+                            colors: obstacleColors,
                             center: .topLeading,
                             startRadius: 0,
                             endRadius: obstacle.radius * 2
                         )
                     )
                     .frame(width: obstacle.radius * 2, height: obstacle.radius * 2)
-                    .shadow(color: (isFrozen ? Color.blue : (obstacle.characteristic == .normal ? theme.glowColor : obstacle.characteristic.color)).opacity(0.5), radius: 6, y: 3)
+                    .shadow(color: shadowColor.opacity(0.5), radius: 6, y: 3)
                 
                 // Add icon for special characteristics
                 if obstacle.characteristic != .normal {
@@ -335,6 +331,26 @@ struct ContentView:  View {
             .contentShape(Circle())
             .onTapGesture {
                 onTap()
+            }
+        }
+        
+        private var obstacleColors: [Color] {
+            if isFrozen {
+                return [.blue, .blue.opacity(0.7)]
+            } else if obstacle.characteristic == .normal {
+                return theme.colors
+            } else {
+                return [obstacle.characteristic.color, obstacle.characteristic.color.opacity(0.7)]
+            }
+        }
+        
+        private var shadowColor: Color {
+            if isFrozen {
+                return .blue
+            } else if obstacle.characteristic == .normal {
+                return theme.glowColor
+            } else {
+                return obstacle.characteristic.color
             }
         }
         

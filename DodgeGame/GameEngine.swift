@@ -1028,7 +1028,7 @@ final class GameEngine: ObservableObject {
             (.bouncing(horizontalSpeed: CGFloat.random(in: 50...100)), 10)
         ]
         
-        let totalWeight = patterns.reduce(0) { $0 + $1.1 }
+        let totalWeight = patterns.reduce(0) { sum, pattern in sum + pattern.1 }
         var random = Int.random(in: 0..<totalWeight)
         
         for (pattern, weight) in patterns {

@@ -22,8 +22,10 @@ Collect various powerups to enhance your gameplay:
 - **🕐 Slow-Mo**: Slows down all obstacles by 60% (12% spawn rate, lasts 4 seconds)
 - **🧲 Magnet**: Automatically attracts nearby coins (8% spawn rate, lasts 6 seconds)
 - **⚡ Speed Boost**: Increases player movement speed (5% spawn rate, lasts 5 seconds)
-- **❄️ Freeze**: Temporarily stops all obstacles (4% spawn rate, lasts 3 seconds, 10s cooldown)
-- **💥 Bomb**: Destroys all obstacles on screen instantly (4% spawn rate, 8s cooldown)
+- **❄️ Freeze**: Temporarily stops all obstacles (4% spawn rate, lasts 3 seconds, 10s cooldown after collection)
+- **💥 Bomb**: Destroys all obstacles on screen instantly (4% spawn rate, 8s cooldown after collection)
+
+Note: Cooldowns prevent collecting the same powerup type immediately after use, adding strategic depth to gameplay.
 
 ### Powerup Combinations 🌟 NEW!
 Activate multiple powerups simultaneously for powerful combo effects:
