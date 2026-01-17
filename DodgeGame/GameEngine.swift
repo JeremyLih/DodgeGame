@@ -37,6 +37,7 @@ enum GameConstants {
     
     // Particles
     static let maxParticles: Int = 150
+    static let rainbowColors: [Color] = [.red, .orange, .yellow, .green, .cyan, .blue, .purple]
     
     // Scoring
     static let scorePerSecond: Int = 10
@@ -1024,7 +1025,9 @@ final class GameEngine: ObservableObject {
     // MARK: - Trail Particles
     
     private func spawnTrailParticles(dt: Double) {
-        // Only spawn trails during movement or when trail effect is active
+        // Trail particles are spawned when:
+        // 1. A trail effect is selected (diamond, rainbow, fire) OR
+        // 2. Speed boost is active (shows green trail for visual feedback)
         guard themeManager.selectedTrailEffect != .none || hasSpeedBoost else { return }
         
         trailSpawnCooldown -= dt
@@ -1039,9 +1042,9 @@ final class GameEngine: ObservableObject {
             case .diamond:
                 trailColor = .cyan
             case .rainbow:
-                trailColor = [.red, .orange, .yellow, .green, .cyan, .blue, .purple].randomElement() ?? .white
+                trailColor = GameConstants.rainbowColors.randomElement() ?? .white
             case .fire:
-                trailColor = [.red, .orange, .yellow].randomElement() ?? .orange
+                trailColor = ParticleEffectPack.fireColors.randomElement() ?? .orange
             }
             
             let trail = TrailParticle(
@@ -1131,7 +1134,7 @@ final class GameEngine: ObservableObject {
             let isLeftSide = Bool.random()
             let x = isLeftSide ? CGFloat.random(in: 0...30) : worldWidth - CGFloat.random(in: 0...30)
             let y = CGFloat.random(in: 0...worldHeight)
-            let rainbowColor: Color = [.red, .orange, .yellow, .green, .cyan, .blue, .purple].randomElement() ?? .white
+            let rainbowColor: Color = GameConstants.rainbowColors.randomElement() ?? .white
             
             if let pooledParticle = getParticleFromPool() {
                 var particle = pooledParticle

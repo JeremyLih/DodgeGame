@@ -126,13 +126,18 @@ enum ParticleEffectPack: String, CaseIterable, Identifiable {
         case .classic:
             return baseColor
         case .fire:
-            return [.red, .orange, .yellow].randomElement() ?? .orange
+            return ParticleEffectPack.fireColors.randomElement() ?? .orange
         case .lightning:
-            return [.cyan, .blue, .white].randomElement() ?? .cyan
+            return ParticleEffectPack.lightningColors.randomElement() ?? .cyan
         case .cherryBlossom:
-            return [.pink, .white, Color(red: 1.0, green: 0.8, blue: 0.9)].randomElement() ?? .pink
+            return ParticleEffectPack.cherryBlossomColors.randomElement() ?? .pink
         }
     }
+    
+    // Static color arrays to avoid repeated allocation
+    static let fireColors: [Color] = [.red, .orange, .yellow]
+    static let lightningColors: [Color] = [.cyan, .blue, .white]
+    static let cherryBlossomColors: [Color] = [.pink, .white, Color(red: 1.0, green: 0.8, blue: 0.9)]
     
     var unlockRequirement: UnlockRequirement {
         switch self {
