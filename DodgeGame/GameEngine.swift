@@ -805,11 +805,16 @@ final class GameEngine: ObservableObject {
 
         // 11) Remove off-screen obstacles
         let before = obstacles.count
+        let removed = obstacles.filter { $0.y - $0.radius > worldHeight + 20 }
         obstacles.removeAll { $0.y - $0.radius > worldHeight + 20 }
-        let removed = before - obstacles.count
-        if removed > 0 {
-            score += removed * GameConstants.scorePerDodge
-            totalObstaclesDodged += removed
+        
+        // Score for dodged obstacles with shape multipliers
+        if !removed.isEmpty {
+            for obs in removed {
+                let points = Int(Double(GameConstants.scorePerDodge) * obs.shape.scoreMultiplier)
+                score += points
+            }
+            totalObstaclesDodged += removed.count
         }
 
         // 12) Remove off-screen powerups
@@ -1036,10 +1041,11 @@ final class GameEngine: ObservableObject {
     }
     
     private func weightedRandomObstacleCharacteristic() -> ObstacleCharacteristic {
-        let totalWeight = [ObstacleCharacteristic.normal, .destructible, .splitting, .explosive].reduce(0) { $0 + $1.spawnWeight }
+        let characteristics: [ObstacleCharacteristic] = [.normal, .destructible, .splitting, .explosive]
+        let totalWeight = characteristics.reduce(0) { $0 + $1.spawnWeight }
         var random = Int.random(in: 0..<totalWeight)
         
-        for characteristic in [ObstacleCharacteristic.normal, .destructible, .splitting, .explosive] {
+        for characteristic in characteristics {
             random -= characteristic.spawnWeight
             if random < 0 {
                 return characteristic

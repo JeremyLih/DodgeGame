@@ -58,7 +58,7 @@ Diverse obstacles with unique behaviors:
 - **🟠 Destructible**: Tap to destroy for bonus points!
 - **💜 Splitting**: Splits into 2-3 smaller obstacles when hit
 - **🔴 Explosive**: Creates chain reaction, damaging nearby obstacles
-- **🔴 Normal**: Standard obstacle behavior
+- **Normal**: Standard obstacle behavior
 
 ### Customization
 - **Player Colors**: 6 unlockable player colors (White, Cyan, Green, Pink, Orange, Purple)

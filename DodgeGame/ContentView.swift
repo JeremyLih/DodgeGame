@@ -169,7 +169,7 @@ struct ContentView:  View {
                 }
         )
         .overlay(alignment: .bottom) {
-            Text("Drag to move | Tap obstacles")
+            Text("Drag to move | tap obstacles")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
                 .padding(.bottom, 22)
