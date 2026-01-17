@@ -129,7 +129,12 @@ struct ContentView:  View {
                 ObstacleView(
                     obstacle: obs,
                     isFrozen: engine.hasFreeze,
-                    theme: engine.themeManager.selectedObstacleTheme
+                    theme: engine.themeManager.selectedObstacleTheme,
+                    onTap: {
+                        if obs.characteristic == .destructible {
+                            engine.destroyObstacle(id: obs.id)
+                        }
+                    }
                 )
             }
 
@@ -150,6 +155,13 @@ struct ContentView:  View {
             )
         }
         .contentShape(Rectangle())
+        .simultaneousGesture(
+            // Tap gesture for destroying destructible obstacles
+            TapGesture()
+                .onEnded { _ in
+                    // This will be handled by the obstacle views
+                }
+        )
         .gesture(
             DragGesture(minimumDistance: 5)
                 .onChanged { value in
@@ -157,7 +169,7 @@ struct ContentView:  View {
                 }
         )
         .overlay(alignment: .bottom) {
-            Text("Drag to move")
+            Text("Drag to move | Tap obstacles")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.6))
                 .padding(.bottom, 22)
@@ -285,6 +297,7 @@ struct ContentView:  View {
         let obstacle: Obstacle
         let isFrozen: Bool
         let theme: ObstacleTheme
+        let onTap: () -> Void
 
         var body: some View {
             ZStack {
@@ -319,6 +332,10 @@ struct ContentView:  View {
                 }
             }
             .position(x: obstacle.x, y: obstacle.y)
+            .contentShape(Circle())
+            .onTapGesture {
+                onTap()
+            }
         }
         
         @ViewBuilder

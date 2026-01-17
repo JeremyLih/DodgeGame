@@ -1272,6 +1272,26 @@ final class GameEngine: ObservableObject {
     
     // MARK: - Obstacle Characteristics
     
+    func destroyObstacle(id: UUID) {
+        guard state == .playing else { return }
+        
+        if let index = obstacles.firstIndex(where: { $0.id == id }) {
+            let obs = obstacles[index]
+            
+            // Only destructible obstacles can be tapped
+            guard obs.characteristic == .destructible else { return }
+            
+            // Remove obstacle and give points
+            spawnExplosion(at: obs.x, y: obs.y, color: .orange, count: 12)
+            obstacles.remove(at: index)
+            
+            let points = Int(Double(GameConstants.scorePerDodge) * obs.shape.scoreMultiplier * 3)
+            score += points
+            recentScoreIncrease = points
+            haptic(.light)
+        }
+    }
+    
     private func splitObstacle(_ obstacle: Obstacle) {
         // Split into 2-3 smaller obstacles
         let splitCount = Int.random(in: 2...3)
