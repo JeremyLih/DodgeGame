@@ -22,8 +22,43 @@ Collect various powerups to enhance your gameplay:
 - **🕐 Slow-Mo**: Slows down all obstacles by 60% (12% spawn rate, lasts 4 seconds)
 - **🧲 Magnet**: Automatically attracts nearby coins (8% spawn rate, lasts 6 seconds)
 - **⚡ Speed Boost**: Increases player movement speed (5% spawn rate, lasts 5 seconds)
-- **❄️ Freeze**: Temporarily stops all obstacles (4% spawn rate, lasts 3 seconds)
-- **💥 Bomb**: Destroys all obstacles on screen instantly (4% spawn rate)
+- **❄️ Freeze**: Temporarily stops all obstacles (4% spawn rate, lasts 3 seconds, 10s cooldown)
+- **💥 Bomb**: Destroys all obstacles on screen instantly (4% spawn rate, 8s cooldown)
+
+### Powerup Combinations 🌟 NEW!
+Activate multiple powerups simultaneously for powerful combo effects:
+- **🧲⏰ Super Magnet** (Magnet + Slow-Mo): +50% attraction radius for coin collection
+- **🛡️⚡ Invincible Dash** (Shield + Speed Boost): Destroy obstacles on contact for 5 seconds!
+- **❄️💥 Ice Blast** (Freeze + Bomb): Clear screen + extended freeze duration
+
+### Powerup Upgrades 🆙 NEW!
+Spend coins to permanently upgrade your powerups:
+- **Shield Duration**: +1 second per level (max level 3)
+- **Magnet Radius**: +20 range per level (max level 3)
+- **Slow-Mo Duration**: +1 second per level (max level 3)
+- **Freeze Duration**: +1 second per level (max level 3)
+- **Cost**: 150 coins per upgrade
+
+### Obstacle System 🎯 NEW!
+Diverse obstacles with unique behaviors:
+
+**Shapes** (different point values):
+- **⚫ Circle**: Standard obstacle (1.0x points)
+- **🔺 Triangle**: Sharp and dangerous (1.2x points)
+- **⬛ Square**: Solid block (1.1x points)
+- **⭐ Star**: Rare and valuable (1.5x points)
+
+**Movement Patterns**:
+- **Straight**: Classic downward fall
+- **🌊 Snake**: Sinusoidal side-to-side motion
+- **🎯 Tracking**: Slowly follows player position
+- **⬅️➡️ Bouncing**: Bounces off screen edges
+
+**Special Characteristics**:
+- **🟠 Destructible**: Tap to destroy for bonus points!
+- **💜 Splitting**: Splits into 2-3 smaller obstacles when hit
+- **🔴 Explosive**: Creates chain reaction, damaging nearby obstacles
+- **🔴 Normal**: Standard obstacle behavior
 
 ### Customization
 - **Player Colors**: 6 unlockable player colors (White, Cyan, Green, Pink, Orange, Purple)
@@ -34,6 +69,8 @@ Collect various powerups to enhance your gameplay:
 - **Haptic Feedback Toggle**: Enable/disable vibration feedback
 - **Time Attack Duration**: Choose 60, 90, or 120 seconds for Time Attack mode
 - **Player Color Selection**: Choose your unlocked player color
+- **Powerup Upgrades**: Spend coins to enhance your powerup effectiveness
+- **Cooldown Indicators**: Visual feedback for powerup cooldowns
 
 ### Combo System
 - Chain powerup collections to earn **combo bonuses**
@@ -64,19 +101,25 @@ Collect various powerups to enhance your gameplay:
 1. **Start**: Tap the START button from the main menu
 2. **Select Mode**: Choose Endless, Time Attack, or Hardcore mode
 3. **Move**: Drag your finger left or right to control the player
-4. **Avoid**: Dodge the red obstacles falling from the top
-5. **Collect**: Grab powerups to gain advantages
-6. **Survive**: Last as long as possible to achieve a high score!
+4. **Avoid**: Dodge obstacles with various shapes and movement patterns
+5. **Tap**: Destroy orange destructible obstacles by tapping them
+6. **Collect**: Grab powerups to gain advantages
+7. **Combo**: Activate multiple powerups together for powerful combo effects
+8. **Upgrade**: Spend coins in settings to upgrade your powerup effectiveness
+9. **Survive**: Last as long as possible to achieve a high score!
 
 ## 📊 Scoring System
 
 - **Time Survived**: Earn 10 points per second
-- **Dodged Obstacles**: +2 points for each obstacle that passes
+- **Dodged Obstacles**: +2 points for each obstacle that passes (multiplied by shape bonus)
+- **Destroyed Obstacles**: +6 points × shape multiplier for tapping destructible obstacles
 - **Coin Powerups**: +25 points (plus combo bonus)
 - **Other Powerups**: +10 points (plus combo bonus)
 - **Shield Block**: +15 points when shield absorbs a hit
+- **Invincible Dash**: +30 points when destroying obstacle with combo
 - **Bomb Bonus**: +5 points per obstacle destroyed
 - **Combo Bonus**: Additional points for chaining powerups (5 points × combo multiplier)
+- **Shape Multipliers**: Circle (1.0x), Triangle (1.2x), Square (1.1x), Star (1.5x)
 
 ## 🎨 Game Mechanics
 
@@ -145,16 +188,32 @@ The game is carefully balanced to provide an engaging difficulty curve:
 1. **Stay Centered**: Position yourself in the middle to have maximum movement range
 2. **Prioritize Shields**: Shield powerups restore lives when not at max
 3. **Chain Combos**: Collect powerups in quick succession for bonus points
-4. **Use Freeze Wisely**: Freeze powerup stops all obstacles - perfect for dense patterns
-5. **Bomb Strategy**: Bomb powerup clears the screen - save for emergencies
-6. **Speed Boost**: Use speed boost to make quick escapes
-7. **Magnet Strategy**: Activate magnets when multiple coins are on screen
-8. **Watch the Level**: Pay attention to difficulty increases and adjust your strategy
-9. **Practice Patterns**: Learn to recognize dangerous obstacle formations
-10. **Chase Milestones**: Push for coin and score milestones for extra motivation
-11. **Try Different Modes**: Time Attack for structured challenge, Hardcore for intense gameplay
+4. **Powerup Combos**: Combine Shield + Speed Boost for invincible dash, or Magnet + Slow-Mo for super collection
+5. **Tap Destructibles**: Watch for orange obstacles and tap them for easy points
+6. **Use Freeze Wisely**: Freeze powerup stops all obstacles - perfect for dense patterns (10s cooldown)
+7. **Bomb Strategy**: Bomb powerup clears the screen - save for emergencies (8s cooldown)
+8. **Speed Boost**: Use speed boost to make quick escapes and navigate tracking obstacles
+9. **Magnet Strategy**: Activate magnets when multiple coins are on screen
+10. **Upgrade Early**: Invest coins in powerup upgrades to enhance their effectiveness
+11. **Watch the Level**: Pay attention to difficulty increases and adjust your strategy
+12. **Learn Patterns**: Recognize snake, tracking, and bouncing obstacles and plan accordingly
+13. **Chase Stars**: Star-shaped obstacles give 1.5x points - worth the risk!
+14. **Avoid Explosive**: Red glowing obstacles can cause chain reactions
+15. **Try Different Modes**: Time Attack for structured challenge, Hardcore for intense gameplay
 
 ## 📝 Version History
+
+### Latest Version - Enhanced Edition v4 🆕
+- 🎯 **Advanced Obstacle System**: 4 shapes (circle, triangle, square, star) with unique point values
+- 🌊 **Dynamic Movement Patterns**: Snake, tracking, and bouncing obstacles
+- 💥 **Special Characteristics**: Destructible (tap to destroy), splitting, and explosive obstacles
+- ⭐ **Powerup Combinations**: Super Magnet, Invincible Dash, and Ice Blast combos
+- ⏱️ **Cooldown System**: Freeze (10s) and Bomb (8s) cooldowns for balance
+- 🔧 **Powerup Upgrades**: Permanent upgrades for Shield, Magnet, Slow-Mo, and Freeze
+- 🎨 **Visual Enhancements**: Shape-specific rendering with custom icons
+- 📊 **Enhanced Scoring**: Shape multipliers and characteristic bonuses
+- 🎮 **Interactive Gameplay**: Tap destructible obstacles for bonus points
+- 💫 **Combo UI**: Visual indicators for active combos and cooldowns
 
 ### Latest Version - Enhanced Edition v3
 - ❤️ **Multiple Lives System**: Start with 3 lives instead of instant game over

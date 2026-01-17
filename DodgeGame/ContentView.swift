@@ -868,6 +868,9 @@ struct ContentView:  View {
                 // Theme Selection
                 ThemeSelector(engine: engine)
                 
+                // Powerup Upgrades
+                PowerupUpgradesView(engine: engine)
+                
                 // Achievements
                 AchievementsView(engine: engine)
                 
