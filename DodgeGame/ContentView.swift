@@ -126,21 +126,24 @@ struct ContentView:  View {
 
     private func gameCanvas(size: CGSize) -> some View {
         ZStack {
-            // 障碍物
+            // Obstacles
             ForEach(engine.obstacles) { obs in
-                ObstacleView(obstacle: obs)
+                ObstacleView(obstacle: obs, isFrozen: engine.hasFreeze)
             }
 
             // Powerups
             ForEach(engine.powerups) { powerup in
-                PowerupView(powerup:  powerup)
+                PowerupView(powerup: powerup)
             }
 
-            // 玩家
+            // Player
             PlayerView(
                 player: engine.player,
-                hasShield:  engine.hasShield,
-                hasMagnet: engine.hasMagnet
+                hasShield: engine.hasShield,
+                hasMagnet: engine.hasMagnet,
+                hasSpeedBoost: engine.hasSpeedBoost,
+                hasFreeze: engine.hasFreeze,
+                playerColor: engine.currentPlayerColor
             )
         }
         .contentShape(Rectangle())
@@ -153,8 +156,8 @@ struct ContentView:  View {
         .overlay(alignment: .bottom) {
             Text("Drag to move")
                 .font(.caption)
-                .foregroundStyle(. white.opacity(0.6))
-                .padding(. bottom, 22)
+                .foregroundStyle(.white.opacity(0.6))
+                .padding(.bottom, 22)
                 .opacity(engine.state == .playing ? 1 : 0)
         }
     }
@@ -165,12 +168,26 @@ struct ContentView:  View {
         let player: Player
         let hasShield: Bool
         let hasMagnet: Bool
+        let hasSpeedBoost: Bool
+        let hasFreeze: Bool
+        let playerColor: Color
 
         @State private var pulseShield = false
         @State private var rotateMagnet = false
+        @State private var speedTrail = false
 
         var body: some View {
             ZStack {
+                // Speed boost trail effect
+                if hasSpeedBoost {
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(Color.green.opacity(0.2 - Double(i) * 0.05))
+                            .frame(width: player.radius * 2, height: player.radius * 2)
+                            .offset(y: CGFloat(i + 1) * 8)
+                    }
+                }
+                
                 // Magnet field indicator
                 if hasMagnet {
                     Circle()
@@ -178,7 +195,7 @@ struct ContentView:  View {
                         .frame(width: 120, height: 120)
                         .rotationEffect(.degrees(rotateMagnet ? 360 : 0))
                         .onAppear {
-                            withAnimation(.linear(duration: 2).repeatForever(autoreverses:  false)) {
+                            withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                                 rotateMagnet = true
                             }
                         }
@@ -187,15 +204,15 @@ struct ContentView:  View {
                 // Shield effect
                 if hasShield {
                     Circle()
-                        . stroke(
+                        .stroke(
                             LinearGradient(
-                                colors: [. cyan, .blue, .cyan],
+                                colors: [.cyan, .blue, .cyan],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
                             lineWidth: 4
                         )
-                        . frame(width: player.radius * 2 + 16, height: player.radius * 2 + 16)
+                        .frame(width: player.radius * 2 + 16, height: player.radius * 2 + 16)
                         .scaleEffect(pulseShield ? 1.1 : 1.0)
                         .opacity(pulseShield ? 0.7 : 1.0)
                         .onAppear {
@@ -208,19 +225,26 @@ struct ContentView:  View {
                         .fill(Color.cyan.opacity(0.2))
                         .frame(width: player.radius * 2 + 12, height: player.radius * 2 + 12)
                 }
+                
+                // Freeze indicator ring
+                if hasFreeze {
+                    Circle()
+                        .stroke(Color.blue.opacity(0.5), lineWidth: 3)
+                        .frame(width: player.radius * 2 + 20, height: player.radius * 2 + 20)
+                }
 
                 // Player ball with gradient
                 Circle()
-                    . fill(
+                    .fill(
                         RadialGradient(
-                            colors: [.white, .white.opacity(0.8)],
+                            colors: [playerColor, playerColor.opacity(0.8)],
                             center: .topLeading,
                             startRadius: 0,
                             endRadius: player.radius * 2
                         )
                     )
                     .frame(width: player.radius * 2, height: player.radius * 2)
-                    .shadow(color: hasShield ? .cyan : .white.opacity(0.5), radius: hasShield ? 15 : 10, y: 6)
+                    .shadow(color: hasShield ? .cyan : (hasSpeedBoost ? .green : playerColor.opacity(0.5)), radius: hasShield ? 15 : 10, y: 6)
             }
             .position(x: player.x, y: player.y)
         }
@@ -230,12 +254,13 @@ struct ContentView:  View {
 
     struct ObstacleView: View {
         let obstacle: Obstacle
+        let isFrozen: Bool
 
         var body: some View {
             ZStack {
                 // Glow effect
                 Circle()
-                    .fill(Color.red.opacity(0.3))
+                    .fill((isFrozen ? Color.blue : Color.red).opacity(0.3))
                     .frame(width: obstacle.radius * 2.5, height: obstacle.radius * 2.5)
                     .blur(radius: 8)
 
@@ -243,14 +268,14 @@ struct ContentView:  View {
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [.red, .red.opacity(0.7)],
-                            center: . topLeading,
+                            colors: isFrozen ? [.blue, .blue.opacity(0.7)] : [.red, .red.opacity(0.7)],
+                            center: .topLeading,
                             startRadius: 0,
                             endRadius: obstacle.radius * 2
                         )
                     )
                     .frame(width: obstacle.radius * 2, height: obstacle.radius * 2)
-                    .shadow(color: .red.opacity(0.5), radius: 6, y: 3)
+                    .shadow(color: (isFrozen ? Color.blue : Color.red).opacity(0.5), radius: 6, y: 3)
             }
             .position(x: obstacle.x, y: obstacle.y)
         }
@@ -264,7 +289,7 @@ struct ContentView:  View {
         @State private var bounce = false
         @State private var glow = false
 
-        var body:  some View {
+        var body: some View {
             ZStack {
                 // Glow
                 Circle()
@@ -275,10 +300,10 @@ struct ContentView:  View {
 
                 // Icon background
                 Circle()
-                    . fill(
+                    .fill(
                         LinearGradient(
                             colors: [powerup.type.color, powerup.type.color.opacity(0.7)],
-                            startPoint:  .topLeading,
+                            startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
@@ -293,7 +318,7 @@ struct ContentView:  View {
             .scaleEffect(bounce ? 1.1 : 1.0)
             .position(x: powerup.x, y: powerup.y)
             .onAppear {
-                withAnimation(. easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
                     bounce = true
                     glow = true
                 }
@@ -318,13 +343,19 @@ struct ContentView:  View {
     private var activePowerupsBar: some View {
         HStack(spacing: 8) {
             if engine.hasShield {
-                powerupTimer(icon: "shield. fill", color: .cyan, remaining: engine.shieldTimeRemaining)
+                powerupTimer(icon: "shield.fill", color: .cyan, remaining: engine.shieldTimeRemaining)
             }
             if engine.hasSlowMo {
-                powerupTimer(icon: "clock.fill", color: .yellow, remaining: engine.slowMoTimeRemaining)
+                powerupTimer(icon: "clock.fill", color: .orange, remaining: engine.slowMoTimeRemaining)
             }
             if engine.hasMagnet {
                 powerupTimer(icon: "magnet", color: .purple, remaining: engine.magnetTimeRemaining)
+            }
+            if engine.hasSpeedBoost {
+                powerupTimer(icon: "bolt.fill", color: .green, remaining: engine.speedBoostTimeRemaining)
+            }
+            if engine.hasFreeze {
+                powerupTimer(icon: "snowflake", color: .blue, remaining: engine.freezeTimeRemaining)
             }
         }
         .padding(.horizontal)
@@ -334,11 +365,11 @@ struct ContentView:  View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.caption.bold())
-            Text(String(format: "%. 1f", remaining))
+            Text(String(format: "%.1f", remaining))
                 .font(.caption.monospacedDigit())
         }
-        . foregroundColor(. white)
-        .padding(. horizontal, 10)
+        .foregroundColor(.white)
+        .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(color.opacity(0.7))
         .clipShape(Capsule())
@@ -395,15 +426,56 @@ struct ContentView:  View {
             .offset(x: engine.player.x, y: engine.player.y + scorePopupOffset - 40)
             .opacity(scorePopupOpacity)
     }
+    
+    // MARK: - Lives Indicator
+    
+    private var livesIndicator: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<GameConstants.maxLives, id: \.self) { i in
+                Image(systemName: i < engine.lives ? "heart.fill" : "heart")
+                    .foregroundColor(i < engine.lives ? .red : .gray.opacity(0.5))
+                    .font(.system(size: 14))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.red.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+    
+    // MARK: - Time Attack Timer
+    
+    private var timeAttackTimer: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "timer")
+                .foregroundColor(.white)
+            Text(String(format: "%.1f", engine.timeRemaining))
+                .font(.headline.monospacedDigit().bold())
+                .foregroundColor(engine.timeRemaining < 10 ? .red : .white)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(engine.timeRemaining < 10 ? Color.red.opacity(0.3) : Color.blue.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
 
     // MARK: - HUD
 
     private var hudOverlay: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             hudPill(title: "Score", value: "\(engine.score)", highlight: false)
-            hudPill(title: "Best", value: "\(engine.bestScore)", highlight: engine.score > 0 && engine.score >= engine.bestScore)
+            
+            // Lives indicator during gameplay
+            if engine.state == .playing {
+                livesIndicator
+            }
 
             Spacer()
+            
+            // Time Attack timer
+            if engine.state == .playing && engine.settings.selectedMode == .timeAttack {
+                timeAttackTimer
+            }
 
             // Difficulty level indicator (only during gameplay)
             if engine.state == .playing {
@@ -426,36 +498,36 @@ struct ContentView:  View {
             // Coins collected
             if engine.state == .playing {
                 HStack(spacing: 4) {
-                    Image(systemName:  "star.circle.fill")
+                    Image(systemName: "star.circle.fill")
                         .foregroundColor(.yellow)
                     Text("\(engine.coinsCollected)")
-                        . font(.headline.weight(.bold))
+                        .font(.headline.weight(.bold))
                         .foregroundColor(.white)
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
-                .background(. yellow.opacity(0.2))
+                .background(.yellow.opacity(0.2))
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             if engine.state == .playing {
                 Button {
                     engine.pauseGame()
-                } label:  {
+                } label: {
                     Image(systemName: "pause.fill")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .padding(10)
-                        .background(. white.opacity(0.14))
+                        .background(.white.opacity(0.14))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
         }
-        .padding(. horizontal, 14)
+        .padding(.horizontal, 14)
     }
 
     private func hudPill(title: String, value: String, highlight: Bool) -> some View {
-        VStack(alignment:  .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.7))
@@ -463,9 +535,9 @@ struct ContentView:  View {
                 .font(.headline.weight(.bold))
                 .foregroundStyle(highlight ? .yellow : .white)
         }
-        .padding(. vertical, 8)
+        .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background(highlight ?  . yellow.opacity(0.2) : .white.opacity(0.12))
+        .background(highlight ? .yellow.opacity(0.2) : .white.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
@@ -474,8 +546,12 @@ struct ContentView:  View {
     @ViewBuilder
     private var overlayPanels: some View {
         switch engine.state {
-        case . ready:
-            readyPanel
+        case .ready:
+            if engine.showSettings {
+                settingsPanel
+            } else {
+                readyPanel
+            }
         case .gameOver:
             gameOverPanel
         case .playing:
@@ -486,90 +562,292 @@ struct ContentView:  View {
     }
 
     private var readyPanel: some View {
-        VStack(spacing: 14) {
-            Text("🎮 Dodge + Powerups")
-                .font(.largeTitle.weight(.heavy))
-                .foregroundStyle(.white)
+        ScrollView {
+            VStack(spacing: 14) {
+                Text("🎮 Dodge Game")
+                    .font(.largeTitle.weight(.heavy))
+                    .foregroundStyle(.white)
 
-            VStack(spacing: 8) {
-                Text("Survive as long as possible!")
-                    .foregroundStyle(.white.opacity(0.9))
-
-                HStack(spacing: 16) {
-                    powerupLegend(icon: "star.circle.fill", color: .yellow, text: "+Points")
-                    powerupLegend(icon: "shield.fill", color: .cyan, text: "Shield")
-                }
-                HStack(spacing: 16) {
-                    powerupLegend(icon: "clock.fill", color: .yellow, text: "Slow-Mo")
-                    powerupLegend(icon: "magnet", color: .purple, text: "Magnet")
-                }
-            }
-            .padding(.vertical, 8)
-
-            // Statistics display
-            if engine.totalGamesPlayed > 0 {
-                VStack(spacing: 4) {
-                    Text("📊 Your Stats")
+                // Game Mode Selector
+                VStack(spacing: 8) {
+                    Text("Game Mode")
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.7))
-                    HStack(spacing: 20) {
-                        VStack(spacing: 2) {
-                            Text("\(engine.totalGamesPlayed)")
-                                .font(.headline.bold())
-                                .foregroundStyle(.white)
-                            Text("Games")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-                        VStack(spacing: 2) {
-                            Text("\(engine.totalCoinsCollected)")
-                                .font(.headline.bold())
-                                .foregroundStyle(.yellow)
-                            Text("Total Coins")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.6))
+                    
+                    HStack(spacing: 8) {
+                        ForEach(GameMode.allCases) { mode in
+                            Button {
+                                engine.settings.selectedMode = mode
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Text(mode.rawValue)
+                                        .font(.caption.bold())
+                                    if mode == .timeAttack {
+                                        Text("\(engine.settings.timeAttackDuration)s")
+                                            .font(.caption2)
+                                    }
+                                }
+                                .foregroundStyle(engine.settings.selectedMode == mode ? .black : .white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(engine.settings.selectedMode == mode ? Color.white : Color.white.opacity(0.2))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
                         }
                     }
+                    
+                    Text(engine.settings.selectedMode.description)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.6))
                 }
                 .padding(.vertical, 8)
-                .padding(.horizontal, 16)
-                .background(.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
 
-            Button {
-                engine.startGame()
-            } label: {
-                Text("START")
-                    .font(.headline.weight(.bold))
-                    . foregroundStyle(.black)
-                    .padding(. vertical, 14)
-                    .frame(maxWidth: 220)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                // Powerups Legend (condensed)
+                VStack(spacing: 6) {
+                    HStack(spacing: 12) {
+                        powerupLegend(icon: "star.circle.fill", color: .yellow, text: "Coins")
+                        powerupLegend(icon: "shield.fill", color: .cyan, text: "Shield/Life")
+                        powerupLegend(icon: "clock.fill", color: .orange, text: "Slow")
+                    }
+                    HStack(spacing: 12) {
+                        powerupLegend(icon: "magnet", color: .purple, text: "Magnet")
+                        powerupLegend(icon: "bolt.fill", color: .green, text: "Speed")
+                        powerupLegend(icon: "snowflake", color: .blue, text: "Freeze")
+                    }
+                    HStack(spacing: 12) {
+                        powerupLegend(icon: "flame.fill", color: .red, text: "Bomb")
+                    }
+                }
+                .padding(.vertical, 6)
+
+                // Statistics display
+                if engine.totalGamesPlayed > 0 {
+                    VStack(spacing: 4) {
+                        HStack(spacing: 20) {
+                            VStack(spacing: 2) {
+                                Text("\(engine.totalGamesPlayed)")
+                                    .font(.headline.bold())
+                                    .foregroundStyle(.white)
+                                Text("Games")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                            VStack(spacing: 2) {
+                                Text("\(engine.totalCoinsCollected)")
+                                    .font(.headline.bold())
+                                    .foregroundStyle(.yellow)
+                                Text("Total Coins")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                            VStack(spacing: 2) {
+                                Text("\(engine.bestScore)")
+                                    .font(.headline.bold())
+                                    .foregroundStyle(.green)
+                                Text("Best Score")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .background(.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                // Buttons
+                VStack(spacing: 10) {
+                    Button {
+                        engine.startGame()
+                    } label: {
+                        Text("START")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(.black)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: 220)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    
+                    Button {
+                        engine.showSettings = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "gearshape.fill")
+                            Text("Settings")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: 180)
+                        .background(.white.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
             }
+            .padding(26)
         }
-        .padding(26)
-        .background(. ultraThinMaterial.opacity(0.95))
+        .background(.ultraThinMaterial.opacity(0.95))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 18)
+        .frame(maxHeight: UIScreen.main.bounds.height * 0.8)
+    }
+    
+    // MARK: - Settings Panel
+    
+    private var settingsPanel: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                Text("⚙️ Settings")
+                    .font(.title.weight(.heavy))
+                    .foregroundStyle(.white)
+                
+                // Haptic Toggle
+                VStack(spacing: 8) {
+                    Toggle(isOn: $engine.settings.hapticEnabled) {
+                        HStack {
+                            Image(systemName: "iphone.radiowaves.left.and.right")
+                            Text("Haptic Feedback")
+                        }
+                        .foregroundStyle(.white)
+                    }
+                    .tint(.green)
+                }
+                .padding()
+                .background(.white.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Time Attack Duration (only if Time Attack mode selected)
+                if engine.settings.selectedMode == .timeAttack {
+                    VStack(spacing: 8) {
+                        Text("Time Attack Duration")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white.opacity(0.7))
+                        
+                        HStack(spacing: 10) {
+                            ForEach(GameConstants.timeAttackDurations, id: \.self) { duration in
+                                Button {
+                                    engine.settings.timeAttackDuration = duration
+                                } label: {
+                                    Text("\(duration)s")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(engine.settings.timeAttackDuration == duration ? .black : .white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(engine.settings.timeAttackDuration == duration ? Color.white : Color.white.opacity(0.2))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(.white.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                
+                // Player Color Selection
+                VStack(spacing: 12) {
+                    Text("Player Color")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.7))
+                    
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 70))], spacing: 10) {
+                        ForEach(0..<GameSettings.playerColors.count, id: \.self) { index in
+                            let color = GameSettings.playerColors[index]
+                            let name = GameSettings.playerColorNames[index]
+                            let cost = GameSettings.playerColorCosts[index]
+                            let isUnlocked = engine.unlockedColors.contains(index)
+                            let isSelected = engine.settings.playerColorIndex == index
+                            
+                            Button {
+                                if isUnlocked {
+                                    engine.selectColor(index: index)
+                                } else if engine.canAffordColor(index: index) {
+                                    _ = engine.unlockColor(index: index)
+                                }
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Circle()
+                                        .fill(color)
+                                        .frame(width: 30, height: 30)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(isSelected ? Color.white : Color.clear, lineWidth: 3)
+                                        )
+                                    
+                                    Text(name)
+                                        .font(.caption2)
+                                        .foregroundStyle(.white)
+                                    
+                                    if !isUnlocked {
+                                        HStack(spacing: 2) {
+                                            Image(systemName: "lock.fill")
+                                                .font(.system(size: 8))
+                                            Text("\(cost)")
+                                                .font(.caption2)
+                                        }
+                                        .foregroundStyle(engine.canAffordColor(index: index) ? .yellow : .gray)
+                                    }
+                                }
+                                .padding(8)
+                                .background(isSelected ? color.opacity(0.3) : Color.white.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                        }
+                    }
+                    
+                    Text("Your coins: \(engine.totalCoinsCollected)")
+                        .font(.caption)
+                        .foregroundStyle(.yellow)
+                }
+                .padding()
+                .background(.white.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                Button {
+                    engine.saveSettings()
+                    engine.showSettings = false
+                } label: {
+                    Text("Done")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.black)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: 180)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+            }
+            .padding(26)
+        }
+        .background(.ultraThinMaterial.opacity(0.95))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, 18)
+        .frame(maxHeight: UIScreen.main.bounds.height * 0.85)
     }
 
-    private func powerupLegend(icon:  String, color: Color, text:  String) -> some View {
+    private func powerupLegend(icon: String, color: Color, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .foregroundColor(color)
+                .font(.system(size: 12))
             Text(text)
-                .font(. caption)
+                .font(.caption2)
                 .foregroundColor(.white.opacity(0.8))
         }
     }
 
     private var gameOverPanel: some View {
         VStack(spacing: 12) {
-            Text("💥 GAME OVER")
-                .font(.title.weight(.heavy))
-                .foregroundStyle(. white)
+            if engine.timeAttackWon {
+                Text("🏆 YOU WON!")
+                    .font(.title.weight(.heavy))
+                    .foregroundStyle(.green)
+            } else {
+                Text("💥 GAME OVER")
+                    .font(.title.weight(.heavy))
+                    .foregroundStyle(.white)
+            }
 
             VStack(spacing: 4) {
                 Text("Score: \(engine.score)")
@@ -618,31 +896,44 @@ struct ContentView:  View {
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.vertical, 12)
-                        . frame(maxWidth: 140)
-                        .background(. white.opacity(0.18))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: . continuous))
+                        .frame(maxWidth: 140)
+                        .background(.white.opacity(0.18))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
         }
         .padding(22)
         .background(.ultraThinMaterial.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style:  .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 18)
     }
 
-    private var pausedPanel:  some View {
+    private var pausedPanel: some View {
         VStack(spacing: 16) {
             Text("⏸️ PAUSED")
                 .font(.title.weight(.heavy))
                 .foregroundStyle(.white)
 
-            Text("Score: \(engine.score)")
-                .foregroundStyle(.white.opacity(0.8))
+            VStack(spacing: 4) {
+                Text("Score: \(engine.score)")
+                    .foregroundStyle(.white.opacity(0.8))
+                
+                // Show lives remaining
+                HStack(spacing: 4) {
+                    Text("Lives:")
+                        .foregroundStyle(.white.opacity(0.6))
+                    ForEach(0..<engine.lives, id: \.self) { _ in
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(.red)
+                            .font(.system(size: 12))
+                    }
+                }
+            }
 
             VStack(spacing: 10) {
                 Button {
                     engine.resumeGame()
-                } label:  {
+                } label: {
                     Text("RESUME")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.black)
@@ -661,13 +952,13 @@ struct ContentView:  View {
                         .padding(.vertical, 12)
                         .frame(maxWidth: 180)
                         .background(.white.opacity(0.18))
-                        . clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
         }
         .padding(26)
         .background(.ultraThinMaterial.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: . continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 18)
     }
 }
