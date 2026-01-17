@@ -170,7 +170,8 @@ struct Obstacle: Identifiable {
     var pattern: MovementPattern = .straight
     var property: ObstacleProperty = .normal
     
-    // For sine wave movement
+    // For sine wave movement - store original center X
+    let initialX: CGFloat
     var sineOffset: CGFloat = 0
     var sineAmplitude: CGFloat = 60
     var sineFrequency: CGFloat = 2.0
@@ -180,6 +181,22 @@ struct Obstacle: Identifiable {
     
     // Track if obstacle has been tapped (for destructible)
     var markedForDestruction: Bool = false
+    
+    init(x: CGFloat, y: CGFloat, radius: CGFloat, speed: CGFloat, type: ObstacleType = .circle, pattern: MovementPattern = .straight, property: ObstacleProperty = .normal, sineOffset: CGFloat = 0, sineAmplitude: CGFloat = 60, sineFrequency: CGFloat = 2.0, vx: CGFloat = 0) {
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.speed = speed
+        self.type = type
+        self.pattern = pattern
+        self.property = property
+        self.initialX = x  // Store initial X position for sine wave
+        self.sineOffset = sineOffset
+        self.sineAmplitude = sineAmplitude
+        self.sineFrequency = sineFrequency
+        self.vx = vx
+        self.markedForDestruction = false
+    }
 }
 
 // MARK: - Powerup System
@@ -650,11 +667,10 @@ final class GameEngine: ObservableObject {
                     obstacles[i].y += baseSpeed
                     
                 case .sine:
-                    // Sine wave movement
+                    // Sine wave movement - oscillate around initial X position
                     obstacles[i].y += baseSpeed
                     obstacles[i].sineOffset += CGFloat(dt) * obstacles[i].sineFrequency
-                    let centerX = obstacles[i].x
-                    obstacles[i].x = centerX + sin(obstacles[i].sineOffset) * obstacles[i].sineAmplitude
+                    obstacles[i].x = obstacles[i].initialX + sin(obstacles[i].sineOffset) * obstacles[i].sineAmplitude
                     
                 case .tracking:
                     // Slowly track toward player
@@ -775,18 +791,24 @@ final class GameEngine: ObservableObject {
     // MARK: - Obstacle Special Properties
     
     private func handleObstacleProperty(obstacle: Obstacle, atIndex index: Int) {
+        // Store coordinates before any removal
+        let explosionX = obstacle.x
+        let explosionY = obstacle.y
+        
         switch obstacle.property {
         case .normal:
             // Standard collision
-            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 12)
+            spawnExplosion(at: explosionX, y: explosionY, color: obstacle.property.color, count: 12)
             
         case .destructible:
             // Already handled - can be destroyed by tapping
-            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 12)
+            spawnExplosion(at: explosionX, y: explosionY, color: obstacle.property.color, count: 12)
             
         case .splitting:
             // Split into 2-3 smaller obstacles
-            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 15)
+            spawnExplosion(at: explosionX, y: explosionY, color: obstacle.property.color, count: 15)
+            
+            // Remove the original obstacle
             if obstacles.indices.contains(index) {
                 obstacles.remove(at: index)
             }
@@ -799,8 +821,8 @@ final class GameEngine: ObservableObject {
                     let offsetX = cos(angle) * 30
                     let offsetY = sin(angle) * 30
                     let newObs = Obstacle(
-                        x: obstacle.x + offsetX,
-                        y: obstacle.y + offsetY,
+                        x: explosionX + offsetX,
+                        y: explosionY + offsetY,
                         radius: newRadius,
                         speed: obstacle.speed * 0.8,
                         type: .circle,
@@ -813,22 +835,30 @@ final class GameEngine: ObservableObject {
             
         case .exploding:
             // Create explosion that affects nearby area
-            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 20)
+            spawnExplosion(at: explosionX, y: explosionY, color: obstacle.property.color, count: 20)
+            
+            // Remove the exploding obstacle
             if obstacles.indices.contains(index) {
                 obstacles.remove(at: index)
             }
             
             // Destroy nearby obstacles
             let explosionRadius: CGFloat = 80
-            obstacles.removeAll { other in
-                let dx = other.x - obstacle.x
-                let dy = other.y - obstacle.y
+            var indicesToRemove: [Int] = []
+            
+            for (idx, other) in obstacles.enumerated() {
+                let dx = other.x - explosionX
+                let dy = other.y - explosionY
                 let dist = sqrt(dx*dx + dy*dy)
                 if dist < explosionRadius && other.id != obstacle.id {
                     spawnExplosion(at: other.x, y: other.y, color: .orange, count: 8)
-                    return true
+                    indicesToRemove.append(idx)
                 }
-                return false
+            }
+            
+            // Remove in reverse order to maintain indices
+            for idx in indicesToRemove.reversed() {
+                obstacles.remove(at: idx)
             }
         }
     }
@@ -1413,8 +1443,9 @@ final class GameEngine: ObservableObject {
     func tapAtLocation(x: CGFloat, y: CGFloat) {
         guard state == .playing else { return }
         
-        // Check if tapped on a destructible obstacle
-        for (index, obs) in obstacles.enumerated().reversed() {
+        // Check if tapped on a destructible obstacle - iterate in reverse to avoid index issues
+        for index in obstacles.indices.reversed() {
+            let obs = obstacles[index]
             let dx = obs.x - x
             let dy = obs.y - y
             let dist = sqrt(dx*dx + dy*dy)
