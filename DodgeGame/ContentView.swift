@@ -5,6 +5,8 @@ struct ContentView:  View {
     @StateObject private var engine = GameEngine()
     @State private var showCombo = false
     @State private var comboScale: CGFloat = 1.0
+    @State private var scorePopupOffset: CGFloat = 0
+    @State private var scorePopupOpacity: Double = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -36,6 +38,16 @@ struct ContentView:  View {
                 if showCombo && engine.combo > 1 {
                     comboIndicator
                 }
+                
+                // Milestone achievement notification
+                if engine.showMilestone {
+                    milestoneNotification
+                }
+                
+                // Score popup animation
+                if engine.recentScoreIncrease > 0 && scorePopupOpacity > 0 {
+                    scorePopup
+                }
 
                 // HUD 顶部信息
                 hudOverlay
@@ -60,6 +72,17 @@ struct ContentView:  View {
                     if engine.combo == newValue {
                         withAnimation { showCombo = false }
                     }
+                }
+            }
+        }
+        .onChange(of: engine.recentScoreIncrease) { oldValue, newValue in
+            if newValue > 0 {
+                // Animate score popup
+                scorePopupOffset = 0
+                scorePopupOpacity = 1.0
+                withAnimation(.easeOut(duration: 1.0)) {
+                    scorePopupOffset = -40
+                    scorePopupOpacity = 0
                 }
             }
         }
@@ -334,6 +357,39 @@ struct ContentView:  View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .scaleEffect(comboScale)
         .position(x: UIScreen.main.bounds.width / 2, y: 150)
+    }
+    
+    // MARK: - Milestone Notification
+    
+    private var milestoneNotification: some View {
+        Text(engine.milestoneText)
+            .font(.title2.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [.purple, .blue],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .opacity(0.9)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .purple.opacity(0.5), radius: 20)
+            .position(x: UIScreen.main.bounds.width / 2, y: 200)
+            .transition(.scale.combined(with: .opacity))
+    }
+    
+    // MARK: - Score Popup
+    
+    private var scorePopup: some View {
+        Text("+\(engine.recentScoreIncrease)")
+            .font(.title3.bold())
+            .foregroundStyle(.yellow)
+            .shadow(color: .black.opacity(0.5), radius: 2)
+            .offset(x: engine.player.x, y: engine.player.y + scorePopupOffset - 40)
+            .opacity(scorePopupOpacity)
     }
 
     // MARK: - HUD

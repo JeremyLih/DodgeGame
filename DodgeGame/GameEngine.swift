@@ -109,6 +109,9 @@ final class GameEngine: ObservableObject {
     @Published var totalCoinsCollected: Int = 0
     @Published var currentDifficultyLevel: Int = 0
     @Published var difficultyJustIncreased: Bool = false
+    @Published var recentScoreIncrease: Int = 0
+    @Published var showMilestone: Bool = false
+    @Published var milestoneText: String = ""
 
     @Published var player: Player = Player(x: 0, y:  0, radius: 18)
     @Published var obstacles: [Obstacle] = []
@@ -320,7 +323,13 @@ final class GameEngine: ObservableObject {
         gameTime += dt
 
         // 2) Score increases with time
+        let oldScore = score
         score += Int(dt * 10.0)
+        
+        // Check for score milestones
+        if score != oldScore {
+            checkScoreMilestone(currentScore: score)
+        }
 
         // 3) Update combo timer
         if combo > 0 {
@@ -410,6 +419,7 @@ final class GameEngine: ObservableObject {
 
                 haptic(.medium)
                 score += 15
+                recentScoreIncrease = 15
             } else {
                 endGame()
             }
@@ -570,32 +580,77 @@ final class GameEngine: ObservableObject {
         case . coin:
             let points = 25 + comboBonus
             score += points
+            recentScoreIncrease = points
             coinsCollected += 1
             haptic(.light)
+            
+            // Milestone achievements for coins
+            checkMilestone(coins: coinsCollected)
 
         case .shield:
             hasShield = true
             shieldTimeRemaining = type.duration
-            score += 10 + comboBonus
+            let points = 10 + comboBonus
+            score += points
+            recentScoreIncrease = points
             haptic(.medium)
 
         case .slowMo:
             hasSlowMo = true
             slowMoTimeRemaining = type.duration
-            score += 10 + comboBonus
+            let points = 10 + comboBonus
+            score += points
+            recentScoreIncrease = points
             haptic(.medium)
 
         case .magnet:
             hasMagnet = true
             magnetTimeRemaining = type.duration
-            score += 10 + comboBonus
+            let points = 10 + comboBonus
+            score += points
+            recentScoreIncrease = points
             haptic(.medium)
+        }
+    }
+    
+    // MARK: - Milestone System
+    
+    private func checkMilestone(coins: Int) {
+        let milestones = [10, 25, 50, 100, 250, 500]
+        if milestones.contains(coins) {
+            showMilestoneNotification("🎯 \(coins) Coins Collected!")
+        }
+    }
+    
+    private func checkScoreMilestone(currentScore: Int) {
+        let scoreMilestones = [100, 250, 500, 1000, 2500, 5000, 10000]
+        for milestone in scoreMilestones {
+            if currentScore >= milestone && (currentScore - Int(10 * 0.016)) < milestone {
+                showMilestoneNotification("⭐ Score: \(milestone)!")
+                break
+            }
+        }
+    }
+    
+    private func showMilestoneNotification(_ text: String) {
+        milestoneText = text
+        showMilestone = true
+        haptic(.heavy)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.showMilestone = false
         }
     }
 
     // MARK: - Particles
 
     private func spawnExplosion(at x:  CGFloat, y: CGFloat, color: Color, count: Int) {
+        // Limit total particles to prevent performance issues
+        let maxParticles = 150
+        if particles.count > maxParticles {
+            particles.removeFirst(min(count, particles.count - maxParticles + count))
+        }
+        
         for _ in 0..<count {
             let angle = CGFloat.random(in: 0...(2 * .pi))
             let speed = CGFloat.random(in: 50...150)

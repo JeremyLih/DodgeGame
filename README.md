@@ -22,16 +22,20 @@ Collect various powerups to enhance your gameplay:
 - Extra points awarded for higher combos!
 
 ### Visual Effects
-- **Particle System**: Explosive visual effects on collisions and powerup collection
+- **Particle System**: Explosive visual effects on collisions and powerup collection (optimized for performance)
 - **Animated Background**: Beautiful gradient backdrop with star field
 - **Smooth Animations**: Fluid gameplay with 60 FPS performance
 - **Haptic Feedback**: Tactile responses for key game events
+- **Score Popups**: Animated floating text showing points earned
+- **Milestone Notifications**: Celebratory alerts for achievements
 
 ### Statistics & Progression
-- **Difficulty Level Indicator**: See your current difficulty level during gameplay
-- **Visual Feedback**: Screen flashes when difficulty increases
+- **Difficulty Level Indicator**: See your current difficulty level during gameplay with visual flash on increases
+- **Visual Feedback**: Screen element pulses and changes color when difficulty increases
 - **Lifetime Statistics**: Track total games played and coins collected across all sessions
 - **Level Achievement**: Shows maximum difficulty level reached each game
+- **Milestone System**: Achievements for reaching coin milestones (10, 25, 50, 100, 250, 500) and score milestones (100, 250, 500, 1000, 2500, 5000, 10000)
+- **Animated Feedback**: Score increases shown with floating text animations
 
 ## 🎯 How to Play
 
@@ -85,10 +89,11 @@ Collect various powerups to enhance your gameplay:
 - **Modular Design**: Separate components for player, obstacles, powerups, and particles
 
 ### Performance Optimizations
-- Efficient particle system with automatic cleanup
-- Off-screen object removal
+- Efficient particle system with automatic cleanup and particle count limiting (max 150)
+- Off-screen object removal to maintain performance
 - Optimized collision detection
 - Smooth animations with SwiftUI's animation system
+- 60 FPS consistent frame rate
 
 ## 🎲 Game Balance
 
@@ -120,10 +125,22 @@ The game is carefully balanced to provide an engaging difficulty curve:
 5. **Magnet Strategy**: Activate magnets when multiple coins are on screen
 6. **Watch the Level**: Pay attention to difficulty increases and adjust your strategy
 7. **Practice Patterns**: Learn to recognize dangerous obstacle formations
+8. **Chase Milestones**: Push for coin and score milestones for extra motivation
+9. **Risk vs Reward**: Sometimes it's worth risking a hit (with shield) to collect valuable coins
 
 ## 📝 Version History
 
-### Latest Version - Enhanced Edition
+### Latest Version - Enhanced Edition v2
+- 🎯 Added milestone achievement system with visual notifications
+- ✨ Implemented animated score popups for instant feedback
+- 🎨 Enhanced visual effects and animations
+- 🚀 Optimized particle system (max 150 particles for performance)
+- 📊 Score milestone tracking (100, 250, 500, 1k, 2.5k, 5k, 10k)
+- 🏅 Coin milestone achievements (10, 25, 50, 100, 250, 500)
+- 💫 Added haptic feedback for milestone achievements
+- 🔧 Performance improvements and code optimization
+
+### Previous - Enhanced Edition v1
 - ✨ Added difficulty level indicator with visual feedback
 - 📊 Implemented lifetime statistics tracking
 - 🎯 Enhanced game over screen with more detailed stats
@@ -131,7 +148,7 @@ The game is carefully balanced to provide an engaging difficulty curve:
 - 📈 Better game balance and progression
 - 🎨 Polished UI with consistent design language
 
-### Previous
+### Initial Release
 - Initial release with core gameplay
 - Powerup system implementation
 - Combo mechanics
