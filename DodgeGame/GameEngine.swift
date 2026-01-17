@@ -44,6 +44,7 @@ enum GameConstants {
     static let scorePerCoin: Int = 25
     static let scorePerPowerup: Int = 10
     static let scorePerShieldBlock: Int = 15
+    static let scorePerBombDestroy: Int = 5
     static let comboBonus: Int = 5
     static let comboWindow: Double = 2.0
     
@@ -63,7 +64,7 @@ enum GameMode: String, CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .endless: return "Survive as long as possible"
-        case .timeAttack: return "Survive for 60 seconds"
+        case .timeAttack: return "Survive for the set duration"
         case .hardcore: return "No shield, faster difficulty"
         }
     }
@@ -550,23 +551,14 @@ final class GameEngine: ObservableObject {
         checkPowerupCollection()
 
         // 14) Check collision with obstacles
-        if checkCollision() {
+        if let collidingIndex = findCollidingObstacleIndex() {
+            let collidingObstacle = obstacles[collidingIndex]
+            
             if hasShield {
                 hasShield = false
                 shieldTimeRemaining = 0
-
-                if let index = obstacles.firstIndex(where: { obs in
-                    let dx = obs.x - player.x
-                    let dy = obs.y - player.y
-                    let dist2 = dx*dx + dy*dy
-                    let r = obs.radius + player.radius
-                    return dist2 <= r*r
-                }) {
-                    let obs = obstacles[index]
-                    spawnExplosion(at: obs.x, y: obs.y, color: .cyan, count: 12)
-                    obstacles.remove(at: index)
-                }
-
+                spawnExplosion(at: collidingObstacle.x, y: collidingObstacle.y, color: .cyan, count: 12)
+                obstacles.remove(at: collidingIndex)
                 haptic(.medium)
                 score += GameConstants.scorePerShieldBlock
                 recentScoreIncrease = GameConstants.scorePerShieldBlock
@@ -577,17 +569,8 @@ final class GameEngine: ObservableObject {
                     endGame()
                 } else {
                     // Remove the colliding obstacle and show damage feedback
-                    if let index = obstacles.firstIndex(where: { obs in
-                        let dx = obs.x - player.x
-                        let dy = obs.y - player.y
-                        let dist2 = dx*dx + dy*dy
-                        let r = obs.radius + player.radius
-                        return dist2 <= r*r
-                    }) {
-                        let obs = obstacles[index]
-                        spawnExplosion(at: obs.x, y: obs.y, color: .white, count: 10)
-                        obstacles.remove(at: index)
-                    }
+                    spawnExplosion(at: collidingObstacle.x, y: collidingObstacle.y, color: .white, count: 10)
+                    obstacles.remove(at: collidingIndex)
                     haptic(.heavy)
                 }
             }
@@ -727,17 +710,17 @@ final class GameEngine: ObservableObject {
 
     // MARK: - Collision Detection
 
-    private func checkCollision() -> Bool {
-        for obs in obstacles {
+    private func findCollidingObstacleIndex() -> Int? {
+        for (index, obs) in obstacles.enumerated() {
             let dx = obs.x - player.x
             let dy = obs.y - player.y
             let dist2 = dx*dx + dy*dy
             let r = obs.radius + player.radius
             if dist2 <= r*r {
-                return true
+                return index
             }
         }
-        return false
+        return nil
     }
 
     private func checkPowerupCollection() {
@@ -829,7 +812,7 @@ final class GameEngine: ObservableObject {
                 spawnExplosion(at: obs.x, y: obs.y, color: .red, count: 6)
             }
             obstacles.removeAll()
-            let points = GameConstants.scorePerPowerup + (obstacleCount * 5) + comboBonus
+            let points = GameConstants.scorePerPowerup + (obstacleCount * GameConstants.scorePerBombDestroy) + comboBonus
             score += points
             recentScoreIncrease = points
             haptic(.heavy)
