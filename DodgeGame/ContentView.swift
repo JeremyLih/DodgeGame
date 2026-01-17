@@ -562,17 +562,26 @@ struct ContentView:  View {
     }
 
     private var readyPanel: some View {
-        ScrollView {
-            VStack(spacing: 14) {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 16) {
+                // Title with glow effect
                 Text("🎮 Dodge Game")
                     .font(.largeTitle.weight(.heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .cyan.opacity(0.9)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: .cyan.opacity(0.5), radius: 10)
+                    .padding(.top, 4)
 
-                // Game Mode Selector
-                VStack(spacing: 8) {
+                // Game Mode Selector with glass effect
+                VStack(spacing: 10) {
                     Text("Game Mode")
                         .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(.white.opacity(0.8))
                     
                     HStack(spacing: 8) {
                         ForEach(GameMode.allCases) { mode in
@@ -590,123 +599,260 @@ struct ContentView:  View {
                                 .foregroundStyle(engine.settings.selectedMode == mode ? .black : .white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(engine.settings.selectedMode == mode ? Color.white : Color.white.opacity(0.2))
+                                .background(
+                                    Group {
+                                        if engine.settings.selectedMode == mode {
+                                            Color.white
+                                        } else {
+                                            Color.white.opacity(0.15)
+                                        }
+                                    }
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.white.opacity(engine.settings.selectedMode == mode ? 0 : 0.3), lineWidth: 1)
+                                )
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .shadow(color: engine.settings.selectedMode == mode ? .white.opacity(0.3) : .clear, radius: 8)
                             }
                         }
                     }
                     
                     Text(engine.settings.selectedMode.description)
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(.top, 2)
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                )
 
-                // Powerups Legend (condensed)
-                VStack(spacing: 6) {
-                    HStack(spacing: 12) {
+                // Powerups Legend with glass containers
+                VStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         powerupLegend(icon: "star.circle.fill", color: .yellow, text: "Coins")
                         powerupLegend(icon: "shield.fill", color: .cyan, text: "Shield/Life")
                         powerupLegend(icon: "clock.fill", color: .orange, text: "Slow")
                     }
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         powerupLegend(icon: "magnet", color: .purple, text: "Magnet")
                         powerupLegend(icon: "bolt.fill", color: .green, text: "Speed")
                         powerupLegend(icon: "snowflake", color: .blue, text: "Freeze")
                     }
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         powerupLegend(icon: "flame.fill", color: .red, text: "Bomb")
+                        Spacer().frame(width: 60)
+                        Spacer().frame(width: 60)
                     }
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                )
 
-                // Statistics display
+                // Statistics display with enhanced glass effect
                 if engine.totalGamesPlayed > 0 {
-                    VStack(spacing: 4) {
-                        HStack(spacing: 20) {
-                            VStack(spacing: 2) {
-                                Text("\(engine.totalGamesPlayed)")
-                                    .font(.headline.bold())
-                                    .foregroundStyle(.white)
-                                Text("Games")
-                                    .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.6))
-                            }
-                            VStack(spacing: 2) {
-                                Text("\(engine.totalCoinsCollected)")
-                                    .font(.headline.bold())
-                                    .foregroundStyle(.yellow)
-                                Text("Total Coins")
-                                    .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.6))
-                            }
-                            VStack(spacing: 2) {
-                                Text("\(engine.bestScore)")
-                                    .font(.headline.bold())
-                                    .foregroundStyle(.green)
-                                Text("Best Score")
-                                    .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.6))
-                            }
+                    HStack(spacing: 16) {
+                        VStack(spacing: 3) {
+                            Text("\(engine.totalGamesPlayed)")
+                                .font(.title3.bold())
+                                .foregroundStyle(.white)
+                            Text("Games")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
                         }
+                        .frame(maxWidth: .infinity)
+                        
+                        Divider()
+                            .background(Color.white.opacity(0.3))
+                            .frame(height: 30)
+                        
+                        VStack(spacing: 3) {
+                            Text("\(engine.totalCoinsCollected)")
+                                .font(.title3.bold())
+                                .foregroundStyle(.yellow)
+                            Text("Total Coins")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        Divider()
+                            .background(Color.white.opacity(0.3))
+                            .frame(height: 30)
+                        
+                        VStack(spacing: 3) {
+                            Text("\(engine.bestScore)")
+                                .font(.title3.bold())
+                                .foregroundStyle(.green)
+                            Text("Best Score")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.08))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.4), .white.opacity(0.1)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1.5
+                                    )
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
                 }
 
-                // Buttons
-                VStack(spacing: 10) {
+                // Buttons with enhanced styling
+                VStack(spacing: 12) {
                     Button {
                         engine.startGame()
                     } label: {
                         Text("START")
-                            .font(.headline.weight(.bold))
+                            .font(.title3.weight(.bold))
                             .foregroundStyle(.black)
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: 220)
-                            .background(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .padding(.vertical, 16)
+                            .frame(maxWidth: 240)
+                            .background(
+                                LinearGradient(
+                                    colors: [.white, .white.opacity(0.9)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .shadow(color: .white.opacity(0.5), radius: 15, y: 5)
                     }
                     
                     Button {
                         engine.showSettings = true
                     } label: {
-                        HStack {
+                        HStack(spacing: 8) {
                             Image(systemName: "gearshape.fill")
                             Text("Settings")
                         }
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: 180)
-                        .background(.white.opacity(0.2))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: 200)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.white.opacity(0.15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                 }
+                .padding(.top, 4)
             }
-            .padding(26)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .background(.ultraThinMaterial.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .padding(.horizontal, 18)
-        .frame(maxHeight: UIScreen.main.bounds.height * 0.8)
+        .background(
+            ZStack {
+                // Liquid glass effect with multiple layers
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                
+                // Gradient overlay for depth
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.15),
+                                Color.white.opacity(0.05),
+                                Color.cyan.opacity(0.08),
+                                Color.purple.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                // Border gradient for liquid glass effect
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.6),
+                                Color.cyan.opacity(0.4),
+                                Color.white.opacity(0.2),
+                                Color.purple.opacity(0.3)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+        .shadow(color: .cyan.opacity(0.2), radius: 30, y: 15)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 30)
     }
     
     // MARK: - Settings Panel
     
     private var settingsPanel: some View {
-        ScrollView {
-            VStack(spacing: 16) {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 18) {
+                // Title with gradient
                 Text("⚙️ Settings")
                     .font(.title.weight(.heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .cyan.opacity(0.9)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: .cyan.opacity(0.5), radius: 10)
+                    .padding(.top, 4)
                 
-                // Haptic Toggle
+                // Haptic Toggle with glass effect
                 VStack(spacing: 8) {
                     Toggle(isOn: $engine.settings.hapticEnabled) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Image(systemName: "iphone.radiowaves.left.and.right")
                             Text("Haptic Feedback")
                         }
@@ -715,15 +861,28 @@ struct ContentView:  View {
                     .tint(.green)
                 }
                 .padding()
-                .background(.white.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                )
                 
-                // Time Attack Duration (only if Time Attack mode selected)
+                // Time Attack Duration with glass effect
                 if engine.settings.selectedMode == .timeAttack {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         Text("Time Attack Duration")
                             .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(.white.opacity(0.8))
                         
                         HStack(spacing: 10) {
                             ForEach(GameConstants.timeAttackDurations, id: \.self) { duration in
@@ -735,22 +894,47 @@ struct ContentView:  View {
                                         .foregroundStyle(engine.settings.timeAttackDuration == duration ? .black : .white)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 8)
-                                        .background(engine.settings.timeAttackDuration == duration ? Color.white : Color.white.opacity(0.2))
+                                        .background(
+                                            Group {
+                                                if engine.settings.timeAttackDuration == duration {
+                                                    Color.white
+                                                } else {
+                                                    Color.white.opacity(0.15)
+                                                }
+                                            }
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(Color.white.opacity(engine.settings.timeAttackDuration == duration ? 0 : 0.3), lineWidth: 1)
+                                        )
                                         .clipShape(RoundedRectangle(cornerRadius: 10))
                                 }
                             }
                         }
                     }
                     .padding()
-                    .background(.white.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.white.opacity(0.08))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            )
+                    )
                 }
                 
-                // Player Color Selection
-                VStack(spacing: 12) {
+                // Player Color Selection with glass effect
+                VStack(spacing: 14) {
                     Text("Player Color")
                         .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(.white.opacity(0.8))
                     
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 70))], spacing: 10) {
                         ForEach(0..<GameSettings.playerColors.count, id: \.self) { index in
@@ -770,11 +954,12 @@ struct ContentView:  View {
                                 VStack(spacing: 4) {
                                     Circle()
                                         .fill(color)
-                                        .frame(width: 30, height: 30)
+                                        .frame(width: 32, height: 32)
                                         .overlay(
                                             Circle()
                                                 .stroke(isSelected ? Color.white : Color.clear, lineWidth: 3)
                                         )
+                                        .shadow(color: isSelected ? color.opacity(0.6) : .clear, radius: 10)
                                     
                                     Text(name)
                                         .font(.caption2)
@@ -790,66 +975,169 @@ struct ContentView:  View {
                                         .foregroundStyle(engine.canAffordColor(index: index) ? .yellow : .gray)
                                     }
                                 }
-                                .padding(8)
-                                .background(isSelected ? color.opacity(0.3) : Color.white.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(isSelected ? color.opacity(0.2) : Color.white.opacity(0.08))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(isSelected ? color.opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                         }
                     }
                     
-                    Text("Your coins: \(engine.totalCoinsCollected)")
-                        .font(.caption)
-                        .foregroundStyle(.yellow)
+                    HStack(spacing: 6) {
+                        Image(systemName: "star.circle.fill")
+                            .foregroundStyle(.yellow)
+                        Text("Your coins: \(engine.totalCoinsCollected)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.yellow)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(
+                        Capsule()
+                            .fill(Color.yellow.opacity(0.15))
+                            .overlay(Capsule().stroke(Color.yellow.opacity(0.3), lineWidth: 1))
+                    )
                 }
                 .padding()
-                .background(.white.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                )
                 
                 Button {
                     engine.saveSettings()
                     engine.showSettings = false
                 } label: {
                     Text("Done")
-                        .font(.headline.weight(.bold))
+                        .font(.title3.weight(.bold))
                         .foregroundStyle(.black)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: 180)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: 200)
+                        .background(
+                            LinearGradient(
+                                colors: [.white, .white.opacity(0.9)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: .white.opacity(0.5), radius: 15, y: 5)
                 }
             }
-            .padding(26)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .background(.ultraThinMaterial.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .padding(.horizontal, 18)
-        .frame(maxHeight: UIScreen.main.bounds.height * 0.85)
+        .background(
+            ZStack {
+                // Liquid glass effect
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                
+                // Gradient overlay
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.15),
+                                Color.white.opacity(0.05),
+                                Color.cyan.opacity(0.08),
+                                Color.purple.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                // Border gradient
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.6),
+                                Color.cyan.opacity(0.4),
+                                Color.white.opacity(0.2),
+                                Color.purple.opacity(0.3)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+        .shadow(color: .cyan.opacity(0.2), radius: 30, y: 15)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 30)
     }
 
     private func powerupLegend(icon: String, color: Color, text: String) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             Image(systemName: icon)
                 .foregroundColor(color)
-                .font(.system(size: 12))
+                .font(.system(size: 14))
+                .shadow(color: color.opacity(0.5), radius: 4)
             Text(text)
-                .font(.caption2)
-                .foregroundColor(.white.opacity(0.8))
+                .font(.caption2.weight(.medium))
+                .foregroundColor(.white.opacity(0.9))
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(color.opacity(0.15))
+                .overlay(
+                    Capsule()
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
 
     private var gameOverPanel: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             if engine.timeAttackWon {
                 Text("🏆 YOU WON!")
                     .font(.title.weight(.heavy))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.green, .green.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: .green.opacity(0.5), radius: 10)
             } else {
                 Text("💥 GAME OVER")
                     .font(.title.weight(.heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .white.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: .white.opacity(0.3), radius: 10)
             }
 
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Text("Score: \(engine.score)")
                     .font(.title2.bold())
                     .foregroundStyle(engine.score >= engine.bestScore ? .yellow : .white)
@@ -858,6 +1146,7 @@ struct ContentView:  View {
                     Text("🎉 NEW BEST!")
                         .font(.headline)
                         .foregroundColor(.yellow)
+                        .shadow(color: .yellow.opacity(0.5), radius: 8)
                 }
 
                 HStack(spacing: 20) {
@@ -875,6 +1164,16 @@ struct ContentView:  View {
                     .foregroundStyle(.white.opacity(0.7))
                     .padding(.top, 2)
             }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
 
             HStack(spacing: 12) {
                 Button {
@@ -883,10 +1182,17 @@ struct ContentView:  View {
                     Text("RETRY")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.black)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 13)
                         .frame(maxWidth: 140)
-                        .background(Color.white)
+                        .background(
+                            LinearGradient(
+                                colors: [.white, .white.opacity(0.9)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .shadow(color: .white.opacity(0.4), radius: 10)
                 }
 
                 Button {
@@ -895,33 +1201,84 @@ struct ContentView:  View {
                     Text("MENU")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 13)
                         .frame(maxWidth: 140)
-                        .background(.white.opacity(0.18))
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.white.opacity(0.15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
         }
-        .padding(22)
-        .background(.ultraThinMaterial.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 22)
+        .background(
+            ZStack {
+                // Liquid glass effect
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                
+                // Gradient overlay
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.15),
+                                Color.white.opacity(0.05),
+                                Color.red.opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                // Border gradient
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.6),
+                                Color.white.opacity(0.2)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+        .padding(.horizontal, 20)
     }
 
     private var pausedPanel: some View {
         VStack(spacing: 16) {
             Text("⏸️ PAUSED")
                 .font(.title.weight(.heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.white, .cyan.opacity(0.9)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(color: .cyan.opacity(0.5), radius: 10)
 
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Text("Score: \(engine.score)")
-                    .foregroundStyle(.white.opacity(0.8))
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
                 
                 // Show lives remaining
                 HStack(spacing: 4) {
                     Text("Lives:")
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.7))
                     ForEach(0..<engine.lives, id: \.self) { _ in
                         Image(systemName: "heart.fill")
                             .foregroundColor(.red)
@@ -929,6 +1286,16 @@ struct ContentView:  View {
                     }
                 }
             }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
 
             VStack(spacing: 10) {
                 Button {
@@ -937,10 +1304,17 @@ struct ContentView:  View {
                     Text("RESUME")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.black)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 13)
                         .frame(maxWidth: 180)
-                        .background(Color.white)
+                        .background(
+                            LinearGradient(
+                                colors: [.white, .white.opacity(0.9)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .shadow(color: .white.opacity(0.4), radius: 10)
                 }
 
                 Button {
@@ -949,17 +1323,62 @@ struct ContentView:  View {
                     Text("QUIT")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 13)
                         .frame(maxWidth: 180)
-                        .background(.white.opacity(0.18))
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.white.opacity(0.15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
         }
-        .padding(26)
-        .background(.ultraThinMaterial.opacity(0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 26)
+        .background(
+            ZStack {
+                // Liquid glass effect
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                
+                // Gradient overlay
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.15),
+                                Color.white.opacity(0.05),
+                                Color.cyan.opacity(0.08)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                // Border gradient
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.6),
+                                Color.cyan.opacity(0.4),
+                                Color.white.opacity(0.2)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+        .shadow(color: .cyan.opacity(0.2), radius: 30, y: 15)
+        .padding(.horizontal, 20)
     }
 }
 
