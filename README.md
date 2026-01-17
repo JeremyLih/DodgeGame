@@ -8,13 +8,32 @@ A fast-paced SwiftUI-based iOS game where you dodge obstacles, collect powerups,
 - **Intuitive Controls**: Drag to move your player left and right
 - **Dynamic Difficulty**: Progressive difficulty scaling - the game gets harder every 5 seconds with faster obstacles and increased spawn rates
 - **High Score Tracking**: Your best score is automatically saved and displayed
+- **Multiple Lives System**: Start with 3 lives instead of instant game over (1 life in Hardcore mode)
+
+### Game Modes
+- **🎮 Endless Mode**: Classic survival - play until you run out of lives
+- **⏱️ Time Attack**: Survive for a set duration (60, 90, or 120 seconds) to win
+- **💀 Hardcore Mode**: 1 life only, no shields, faster difficulty progression
 
 ### Powerup System
 Collect various powerups to enhance your gameplay:
-- **⭐ Coins**: Collect for bonus points (60% spawn rate)
-- **🛡️ Shield**: Survive one hit from an obstacle (15% spawn rate, lasts 5 seconds)
-- **🕐 Slow-Mo**: Slows down all obstacles by 60% (15% spawn rate, lasts 4 seconds)
-- **🧲 Magnet**: Automatically attracts nearby coins (10% spawn rate, lasts 6 seconds)
+- **⭐ Coins**: Collect for bonus points (55% spawn rate)
+- **🛡️ Shield/Life**: Restores a life if not at max, otherwise provides hit protection (12% spawn rate, lasts 5 seconds)
+- **🕐 Slow-Mo**: Slows down all obstacles by 60% (12% spawn rate, lasts 4 seconds)
+- **🧲 Magnet**: Automatically attracts nearby coins (8% spawn rate, lasts 6 seconds)
+- **⚡ Speed Boost**: Increases player movement speed (5% spawn rate, lasts 5 seconds)
+- **❄️ Freeze**: Temporarily stops all obstacles (4% spawn rate, lasts 3 seconds)
+- **💥 Bomb**: Destroys all obstacles on screen instantly (4% spawn rate)
+
+### Customization
+- **Player Colors**: 6 unlockable player colors (White, Cyan, Green, Pink, Orange, Purple)
+- **Unlock with Coins**: Spend your collected coins to unlock new colors
+- **Persistent Progress**: All unlocks and preferences are saved
+
+### Settings
+- **Haptic Feedback Toggle**: Enable/disable vibration feedback
+- **Time Attack Duration**: Choose 60, 90, or 120 seconds for Time Attack mode
+- **Player Color Selection**: Choose your unlocked player color
 
 ### Combo System
 - Chain powerup collections to earn **combo bonuses**
@@ -25,11 +44,14 @@ Collect various powerups to enhance your gameplay:
 - **Particle System**: Explosive visual effects on collisions and powerup collection (optimized for performance)
 - **Animated Background**: Beautiful gradient backdrop with star field
 - **Smooth Animations**: Fluid gameplay with 60 FPS performance
-- **Haptic Feedback**: Tactile responses for key game events
+- **Haptic Feedback**: Tactile responses for key game events (can be toggled)
 - **Score Popups**: Animated floating text showing points earned
 - **Milestone Notifications**: Celebratory alerts for achievements
+- **Freeze Effect**: Obstacles turn blue when frozen
+- **Speed Boost Trail**: Visual trail effect when speed boost is active
 
 ### Statistics & Progression
+- **Lives Indicator**: Heart icons showing remaining lives
 - **Difficulty Level Indicator**: See your current difficulty level during gameplay with visual flash on increases
 - **Visual Feedback**: Screen element pulses and changes color when difficulty increases
 - **Lifetime Statistics**: Track total games played and coins collected across all sessions
@@ -40,10 +62,11 @@ Collect various powerups to enhance your gameplay:
 ## 🎯 How to Play
 
 1. **Start**: Tap the START button from the main menu
-2. **Move**: Drag your finger left or right to control the player
-3. **Avoid**: Dodge the red obstacles falling from the top
-4. **Collect**: Grab powerups to gain advantages
-5. **Survive**: Last as long as possible to achieve a high score!
+2. **Select Mode**: Choose Endless, Time Attack, or Hardcore mode
+3. **Move**: Drag your finger left or right to control the player
+4. **Avoid**: Dodge the red obstacles falling from the top
+5. **Collect**: Grab powerups to gain advantages
+6. **Survive**: Last as long as possible to achieve a high score!
 
 ## 📊 Scoring System
 
@@ -52,6 +75,7 @@ Collect various powerups to enhance your gameplay:
 - **Coin Powerups**: +25 points (plus combo bonus)
 - **Other Powerups**: +10 points (plus combo bonus)
 - **Shield Block**: +15 points when shield absorbs a hit
+- **Bomb Bonus**: +5 points per obstacle destroyed
 - **Combo Bonus**: Additional points for chaining powerups (5 points × combo multiplier)
 
 ## 🎨 Game Mechanics
@@ -119,18 +143,34 @@ The game is carefully balanced to provide an engaging difficulty curve:
 ## 🏆 Tips for High Scores
 
 1. **Stay Centered**: Position yourself in the middle to have maximum movement range
-2. **Prioritize Shields**: Shield powerups are your best friend at higher difficulties
+2. **Prioritize Shields**: Shield powerups restore lives when not at max
 3. **Chain Combos**: Collect powerups in quick succession for bonus points
-4. **Use Slow-Mo Wisely**: Save slow-mo powerups for dense obstacle patterns
-5. **Magnet Strategy**: Activate magnets when multiple coins are on screen
-6. **Watch the Level**: Pay attention to difficulty increases and adjust your strategy
-7. **Practice Patterns**: Learn to recognize dangerous obstacle formations
-8. **Chase Milestones**: Push for coin and score milestones for extra motivation
-9. **Risk vs Reward**: Sometimes it's worth risking a hit (with shield) to collect valuable coins
+4. **Use Freeze Wisely**: Freeze powerup stops all obstacles - perfect for dense patterns
+5. **Bomb Strategy**: Bomb powerup clears the screen - save for emergencies
+6. **Speed Boost**: Use speed boost to make quick escapes
+7. **Magnet Strategy**: Activate magnets when multiple coins are on screen
+8. **Watch the Level**: Pay attention to difficulty increases and adjust your strategy
+9. **Practice Patterns**: Learn to recognize dangerous obstacle formations
+10. **Chase Milestones**: Push for coin and score milestones for extra motivation
+11. **Try Different Modes**: Time Attack for structured challenge, Hardcore for intense gameplay
 
 ## 📝 Version History
 
-### Latest Version - Enhanced Edition v2
+### Latest Version - Enhanced Edition v3
+- ❤️ **Multiple Lives System**: Start with 3 lives instead of instant game over
+- 🎮 **Game Modes**: Added Endless, Time Attack, and Hardcore modes
+- ⚡ **Speed Boost Powerup**: Increases player movement speed
+- ❄️ **Freeze Powerup**: Temporarily stops all obstacles
+- 💥 **Bomb Powerup**: Destroys all obstacles on screen
+- ⚙️ **Settings Menu**: Toggle haptics, select game mode, customize player
+- 🎨 **Player Customization**: 6 unlockable player colors
+- 🏪 **Unlock System**: Spend coins to unlock new colors
+- ⏱️ **Time Attack Timer**: Visual countdown for Time Attack mode
+- 💀 **Hardcore Mode**: 1 life, no shields, faster difficulty
+- 🔧 **Code Quality**: Extracted magic numbers to constants
+- 📖 **Updated Documentation**: Comprehensive README updates
+
+### Previous - Enhanced Edition v2
 - 🎯 Added milestone achievement system with visual notifications
 - ✨ Implemented animated score popups for instant feedback
 - 🎨 Enhanced visual effects and animations
