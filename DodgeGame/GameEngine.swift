@@ -29,8 +29,8 @@ enum PowerupType: CaseIterable {
 
     var color: Color {
         switch self {
-        case .coin: return . yellow
-        case .shield: return . cyan
+        case .coin: return .yellow
+        case .shield: return .cyan
         case .slowMo: return .orange
         case .magnet: return .purple
         }
@@ -38,7 +38,7 @@ enum PowerupType: CaseIterable {
 
     var icon: String {
         switch self {
-        case .coin: return "star. circle.fill"
+        case .coin: return "star.circle.fill"
         case .shield: return "shield.fill"
         case .slowMo: return "clock.fill"
         case .magnet: return "magnet"
@@ -621,7 +621,7 @@ final class GameEngine: ObservableObject {
     
     // Track which coin milestones have been achieved
     private let coinMilestones: Set<Int> = [10, 25, 50, 100, 250, 500]
-    private let scoreMilestones: [Int] = [100, 250, 500, 1000, 2500, 5000, 10000]
+    private static let scoreMilestones: [Int] = [100, 250, 500, 1000, 2500, 5000, 10000]
     
     private func checkMilestone(coins: Int) {
         // Check if we just hit a milestone and haven't achieved it yet this game
@@ -632,7 +632,7 @@ final class GameEngine: ObservableObject {
     }
     
     private func checkScoreMilestone(currentScore: Int) {
-        for milestone in scoreMilestones {
+        for milestone in Self.scoreMilestones {
             if currentScore >= milestone && lastScoreMilestone < milestone {
                 lastScoreMilestone = milestone
                 showMilestoneNotification("⭐ Score: \(milestone)!")
