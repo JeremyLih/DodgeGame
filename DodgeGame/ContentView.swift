@@ -143,7 +143,8 @@ struct ContentView:  View {
                 hasMagnet: engine.hasMagnet,
                 hasSpeedBoost: engine.hasSpeedBoost,
                 hasFreeze: engine.hasFreeze,
-                playerColor: engine.currentPlayerColor
+                playerColor: engine.currentPlayerColor,
+                hasInvincibleDash: engine.hasInvincibleDash
             )
         }
         .contentShape(Rectangle())
@@ -153,6 +154,14 @@ struct ContentView:  View {
                     engine.setPlayerX(value.location.x)
                 }
         )
+        .simultaneousGesture(
+            // Tap gesture for destructible obstacles
+            TapGesture()
+                .onEnded { _ in }
+        )
+        .onTapGesture { location in
+            engine.tapAtLocation(x: location.x, y: location.y)
+        }
         .overlay(alignment: .bottom) {
             Text("Drag to move")
                 .font(.caption)
@@ -171,6 +180,7 @@ struct ContentView:  View {
         let hasSpeedBoost: Bool
         let hasFreeze: Bool
         let playerColor: Color
+        let hasInvincibleDash: Bool
 
         @State private var pulseShield = false
         @State private var rotateMagnet = false
@@ -182,10 +192,26 @@ struct ContentView:  View {
                 if hasSpeedBoost {
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
-                            .fill(Color.green.opacity(0.2 - Double(i) * 0.05))
+                            .fill((hasInvincibleDash ? Color.yellow : Color.green).opacity(0.2 - Double(i) * 0.05))
                             .frame(width: player.radius * 2, height: player.radius * 2)
                             .offset(y: CGFloat(i + 1) * 8)
                     }
+                }
+                
+                // Invincible dash aura
+                if hasInvincibleDash {
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.yellow, .orange, .yellow],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 6
+                        )
+                        .frame(width: player.radius * 2 + 20, height: player.radius * 2 + 20)
+                        .scaleEffect(pulseShield ? 1.15 : 1.0)
+                        .opacity(pulseShield ? 0.6 : 1.0)
                 }
                 
                 // Magnet field indicator
@@ -244,7 +270,7 @@ struct ContentView:  View {
                         )
                     )
                     .frame(width: player.radius * 2, height: player.radius * 2)
-                    .shadow(color: hasShield ? .cyan : (hasSpeedBoost ? .green : playerColor.opacity(0.5)), radius: hasShield ? 15 : 10, y: 6)
+                    .shadow(color: hasInvincibleDash ? .yellow : (hasShield ? .cyan : (hasSpeedBoost ? .green : playerColor.opacity(0.5))), radius: hasInvincibleDash ? 20 : (hasShield ? 15 : 10), y: 6)
             }
             .position(x: player.x, y: player.y)
         }
@@ -260,24 +286,110 @@ struct ContentView:  View {
             ZStack {
                 // Glow effect
                 Circle()
-                    .fill((isFrozen ? Color.blue : Color.red).opacity(0.3))
+                    .fill((isFrozen ? Color.blue : obstacle.property.color).opacity(0.3))
                     .frame(width: obstacle.radius * 2.5, height: obstacle.radius * 2.5)
                     .blur(radius: 8)
 
-                // Main obstacle
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: isFrozen ? [.blue, .blue.opacity(0.7)] : [.red, .red.opacity(0.7)],
-                            center: .topLeading,
-                            startRadius: 0,
-                            endRadius: obstacle.radius * 2
-                        )
-                    )
-                    .frame(width: obstacle.radius * 2, height: obstacle.radius * 2)
-                    .shadow(color: (isFrozen ? Color.blue : Color.red).opacity(0.5), radius: 6, y: 3)
+                // Main obstacle with shape based on type
+                Group {
+                    switch obstacle.type {
+                    case .circle:
+                        Circle()
+                            .fill(obstacleGradient)
+                            .frame(width: obstacle.radius * 2, height: obstacle.radius * 2)
+                    case .triangle:
+                        Triangle()
+                            .fill(obstacleGradient)
+                            .frame(width: obstacle.radius * 2, height: obstacle.radius * 2)
+                    case .square:
+                        Rectangle()
+                            .fill(obstacleGradient)
+                            .frame(width: obstacle.radius * 1.8, height: obstacle.radius * 1.8)
+                    case .star:
+                        Star(points: 5)
+                            .fill(obstacleGradient)
+                            .frame(width: obstacle.radius * 2.2, height: obstacle.radius * 2.2)
+                    }
+                }
+                .shadow(color: (isFrozen ? Color.blue : obstacle.property.color).opacity(0.5), radius: 6, y: 3)
+                
+                // Property indicator for special obstacles
+                if obstacle.property != .normal {
+                    propertyIndicator
+                }
             }
             .position(x: obstacle.x, y: obstacle.y)
+        }
+        
+        private var obstacleGradient: RadialGradient {
+            let baseColor = isFrozen ? Color.blue : obstacle.property.color
+            return RadialGradient(
+                colors: [baseColor, baseColor.opacity(0.7)],
+                center: .topLeading,
+                startRadius: 0,
+                endRadius: obstacle.radius * 2
+            )
+        }
+        
+        private var propertyIndicator: some View {
+            Group {
+                switch obstacle.property {
+                case .destructible:
+                    Image(systemName: "target")
+                        .font(.system(size: obstacle.radius * 0.7))
+                        .foregroundColor(.white.opacity(0.8))
+                case .splitting:
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: obstacle.radius * 0.6))
+                        .foregroundColor(.white.opacity(0.8))
+                case .exploding:
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: obstacle.radius * 0.6))
+                        .foregroundColor(.white.opacity(0.8))
+                case .normal:
+                    EmptyView()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Custom Shapes
+    
+    struct Triangle: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+            return path
+        }
+    }
+    
+    struct Star: Shape {
+        let points: Int
+        
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            let center = CGPoint(x: rect.midX, y: rect.midY)
+            let radius = min(rect.width, rect.height) / 2
+            let innerRadius = radius * 0.4
+            
+            for i in 0..<points * 2 {
+                let angle = CGFloat(i) * .pi / CGFloat(points) - .pi / 2
+                let r = i % 2 == 0 ? radius : innerRadius
+                let point = CGPoint(
+                    x: center.x + r * cos(angle),
+                    y: center.y + r * sin(angle)
+                )
+                if i == 0 {
+                    path.move(to: point)
+                } else {
+                    path.addLine(to: point)
+                }
+            }
+            path.closeSubpath()
+            return path
         }
     }
 
@@ -341,24 +453,73 @@ struct ContentView:  View {
     // MARK: - Active Powerups Bar
 
     private var activePowerupsBar: some View {
-        HStack(spacing: 8) {
-            if engine.hasShield {
-                powerupTimer(icon: "shield.fill", color: .cyan, remaining: engine.shieldTimeRemaining)
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                if engine.hasShield {
+                    powerupTimer(icon: "shield.fill", color: .cyan, remaining: engine.shieldTimeRemaining)
+                }
+                if engine.hasSlowMo {
+                    powerupTimer(icon: "clock.fill", color: .orange, remaining: engine.slowMoTimeRemaining)
+                }
+                if engine.hasMagnet {
+                    powerupTimer(icon: "magnet", color: .purple, remaining: engine.magnetTimeRemaining)
+                }
+                if engine.hasSpeedBoost {
+                    powerupTimer(icon: "bolt.fill", color: .green, remaining: engine.speedBoostTimeRemaining)
+                }
+                if engine.hasFreeze {
+                    powerupTimer(icon: "snowflake", color: .blue, remaining: engine.freezeTimeRemaining)
+                }
             }
-            if engine.hasSlowMo {
-                powerupTimer(icon: "clock.fill", color: .orange, remaining: engine.slowMoTimeRemaining)
+            
+            // Active combo indicator
+            if let combo = engine.activeCombo {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.caption.bold())
+                    Text(combo.name)
+                        .font(.caption.bold())
+                    Text(String(format: "%.1f", engine.comboTimeRemaining))
+                        .font(.caption.monospacedDigit())
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    LinearGradient(
+                        colors: [.purple, .pink],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ).opacity(0.8)
+                )
+                .clipShape(Capsule())
             }
-            if engine.hasMagnet {
-                powerupTimer(icon: "magnet", color: .purple, remaining: engine.magnetTimeRemaining)
-            }
-            if engine.hasSpeedBoost {
-                powerupTimer(icon: "bolt.fill", color: .green, remaining: engine.speedBoostTimeRemaining)
-            }
-            if engine.hasFreeze {
-                powerupTimer(icon: "snowflake", color: .blue, remaining: engine.freezeTimeRemaining)
+            
+            // Cooldown indicators
+            HStack(spacing: 8) {
+                if engine.freezeCooldown > 0 {
+                    cooldownIndicator(icon: "snowflake", remaining: engine.freezeCooldown)
+                }
+                if engine.bombCooldown > 0 {
+                    cooldownIndicator(icon: "flame.fill", remaining: engine.bombCooldown)
+                }
             }
         }
         .padding(.horizontal)
+    }
+    
+    private func cooldownIndicator(icon: String, remaining: Double) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2.bold())
+            Text(String(format: "%.0f", remaining))
+                .font(.caption2.monospacedDigit())
+        }
+        .foregroundColor(.white.opacity(0.6))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.red.opacity(0.3))
+        .clipShape(Capsule())
     }
 
     private func powerupTimer(icon: String, color: Color, remaining: Double) -> some View {

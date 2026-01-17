@@ -92,15 +92,119 @@ struct Player {
     let radius: CGFloat
 }
 
+// MARK: - Obstacle Types
+
+enum ObstacleType {
+    case circle
+    case triangle
+    case square
+    case star
+    
+    var collisionRadius: CGFloat {
+        switch self {
+        case .circle: return 1.0
+        case .triangle: return 0.85
+        case .square: return 0.95
+        case .star: return 0.75
+        }
+    }
+    
+    var scoreMultiplier: Int {
+        switch self {
+        case .circle: return 1
+        case .triangle: return 2
+        case .square: return 2
+        case .star: return 3
+        }
+    }
+}
+
+enum MovementPattern {
+    case straight
+    case sine
+    case tracking
+    case bouncing
+    
+    var spawnWeight: Int {
+        switch self {
+        case .straight: return 60
+        case .sine: return 15
+        case .tracking: return 10
+        case .bouncing: return 15
+        }
+    }
+}
+
+enum ObstacleProperty {
+    case normal
+    case destructible
+    case splitting
+    case exploding
+    
+    var spawnWeight: Int {
+        switch self {
+        case .normal: return 70
+        case .destructible: return 15
+        case .splitting: return 10
+        case .exploding: return 5
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .normal: return .red
+        case .destructible: return .orange
+        case .splitting: return .purple
+        case .exploding: return Color(red: 0.8, green: 0.1, blue: 0.1)
+        }
+    }
+}
+
 struct Obstacle: Identifiable {
     let id = UUID()
     var x: CGFloat
     var y: CGFloat
     var radius: CGFloat
     var speed: CGFloat
+    var type: ObstacleType = .circle
+    var pattern: MovementPattern = .straight
+    var property: ObstacleProperty = .normal
+    
+    // For sine wave movement
+    var sineOffset: CGFloat = 0
+    var sineAmplitude: CGFloat = 60
+    var sineFrequency: CGFloat = 2.0
+    
+    // For bouncing movement
+    var vx: CGFloat = 0
+    
+    // Track if obstacle has been tapped (for destructible)
+    var markedForDestruction: Bool = false
 }
 
 // MARK: - Powerup System
+
+enum PowerupCombo {
+    case magnetSlowMo      // Magnet + Slow-Mo = Super attraction
+    case shieldSpeedBoost  // Shield + Speed Boost = Invincible dash
+    case freezeBomb        // Freeze + Bomb = Ice explosion
+    
+    var name: String {
+        switch self {
+        case .magnetSlowMo: return "Super Magnet"
+        case .shieldSpeedBoost: return "Invincible Dash"
+        case .freezeBomb: return "Ice Blast"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .magnetSlowMo: return "+50% attraction range"
+        case .shieldSpeedBoost: return "Can destroy obstacles"
+        case .freezeBomb: return "Screen clear + freeze"
+        }
+    }
+}
 
 enum PowerupType: CaseIterable {
     case coin
@@ -243,6 +347,21 @@ final class GameEngine: ObservableObject {
     @Published var magnetTimeRemaining: Double = 0
     @Published var speedBoostTimeRemaining: Double = 0
     @Published var freezeTimeRemaining: Double = 0
+    
+    // Powerup combos
+    @Published var activeCombo: PowerupCombo? = nil
+    @Published var comboTimeRemaining: Double = 0
+    
+    // Powerup cooldowns (time until can use again)
+    @Published var freezeCooldown: Double = 0
+    @Published var bombCooldown: Double = 0
+    
+    // Powerup upgrade levels (stored persistently)
+    @Published var shieldUpgradeLevel: Int = 0
+    @Published var magnetUpgradeLevel: Int = 0
+    
+    // Invincible dash state (from Shield + Speed combo)
+    @Published var hasInvincibleDash: Bool = false
 
     // Combo system
     @Published var combo: Int = 0
@@ -275,11 +394,14 @@ final class GameEngine: ObservableObject {
     private let unlockedColorsKey = "DodgeGame_UnlockedColors"
     private let settingsHapticKey = "DodgeGame_HapticEnabled"
     private let settingsColorKey = "DodgeGame_PlayerColor"
+    private let shieldUpgradeKey = "DodgeGame_ShieldUpgrade"
+    private let magnetUpgradeKey = "DodgeGame_MagnetUpgrade"
 
     init() {
         loadBestScore()
         loadStatistics()
         loadSettings()
+        loadUpgrades()
     }
 
     // MARK: - Setup
@@ -345,6 +467,13 @@ final class GameEngine: ObservableObject {
         magnetTimeRemaining = 0
         speedBoostTimeRemaining = 0
         freezeTimeRemaining = 0
+        
+        // Reset combos and cooldowns
+        activeCombo = nil
+        comboTimeRemaining = 0
+        freezeCooldown = 0
+        bombCooldown = 0
+        hasInvincibleDash = false
 
         // Reset combo
         combo = 0
@@ -512,7 +641,45 @@ final class GameEngine: ObservableObject {
         // 8) Move obstacles (they use their own stored speed)
         if !hasFreeze {
             for i in obstacles.indices {
-                obstacles[i].y += obstacles[i].speed * CGFloat(dt * speedMultiplier)
+                let pattern = obstacles[i].pattern
+                let baseSpeed = obstacles[i].speed * CGFloat(dt * speedMultiplier)
+                
+                switch pattern {
+                case .straight:
+                    // Normal downward movement
+                    obstacles[i].y += baseSpeed
+                    
+                case .sine:
+                    // Sine wave movement
+                    obstacles[i].y += baseSpeed
+                    obstacles[i].sineOffset += CGFloat(dt) * obstacles[i].sineFrequency
+                    let centerX = obstacles[i].x
+                    obstacles[i].x = centerX + sin(obstacles[i].sineOffset) * obstacles[i].sineAmplitude
+                    
+                case .tracking:
+                    // Slowly track toward player
+                    obstacles[i].y += baseSpeed
+                    let dx = player.x - obstacles[i].x
+                    let trackSpeed: CGFloat = 50 * CGFloat(dt)
+                    if abs(dx) > 5 {
+                        obstacles[i].x += dx > 0 ? trackSpeed : -trackSpeed
+                    }
+                    
+                case .bouncing:
+                    // Bounce off left/right edges
+                    obstacles[i].y += baseSpeed
+                    obstacles[i].x += obstacles[i].vx * CGFloat(dt)
+                    
+                    // Bounce off walls
+                    let radius = obstacles[i].radius
+                    if obstacles[i].x - radius < 0 {
+                        obstacles[i].x = radius
+                        obstacles[i].vx = abs(obstacles[i].vx)
+                    } else if obstacles[i].x + radius > worldWidth {
+                        obstacles[i].x = worldWidth - radius
+                        obstacles[i].vx = -abs(obstacles[i].vx)
+                    }
+                }
             }
         }
 
@@ -525,8 +692,16 @@ final class GameEngine: ObservableObject {
                 let dx = player.x - powerups[i].x
                 let dy = player.y - powerups[i].y
                 let dist = sqrt(dx * dx + dy * dy)
+                
+                // Super Magnet combo increases range by 50%
+                let attractRadius = activeCombo == .magnetSlowMo ? 
+                    GameConstants.magnetAttractRadius * 1.5 : 
+                    GameConstants.magnetAttractRadius
+                
+                // Apply magnet upgrade level boost (20 units per level)
+                let finalRadius = attractRadius + (CGFloat(magnetUpgradeLevel) * 20)
 
-                if dist < GameConstants.magnetAttractRadius && dist > 0 {
+                if dist < finalRadius && dist > 0 {
                     powerups[i].x += (dx / dist) * GameConstants.magnetAttractSpeed * CGFloat(dt)
                     powerups[i].y += (dy / dist) * GameConstants.magnetAttractSpeed * CGFloat(dt)
                 }
@@ -554,25 +729,106 @@ final class GameEngine: ObservableObject {
         if let collidingIndex = findCollidingObstacleIndex() {
             let collidingObstacle = obstacles[collidingIndex]
             
-            if hasShield {
-                hasShield = false
-                shieldTimeRemaining = 0
-                spawnExplosion(at: collidingObstacle.x, y: collidingObstacle.y, color: .cyan, count: 12)
+            // Invincible dash destroys obstacles
+            if hasInvincibleDash {
+                let scoreBonus = GameConstants.scorePerBombDestroy * collidingObstacle.type.scoreMultiplier
+                score += scoreBonus
+                recentScoreIncrease = scoreBonus
+                spawnExplosion(at: collidingObstacle.x, y: collidingObstacle.y, color: .green, count: 10)
                 obstacles.remove(at: collidingIndex)
                 haptic(.medium)
-                score += GameConstants.scorePerShieldBlock
-                recentScoreIncrease = GameConstants.scorePerShieldBlock
+            } else if hasShield {
+                hasShield = false
+                shieldTimeRemaining = 0
+                
+                // Handle special obstacle properties on collision
+                handleObstacleProperty(obstacle: collidingObstacle, atIndex: collidingIndex)
+                
+                if obstacles.indices.contains(collidingIndex) {
+                    obstacles.remove(at: collidingIndex)
+                }
+                
+                let scoreBonus = GameConstants.scorePerShieldBlock * collidingObstacle.type.scoreMultiplier
+                score += scoreBonus
+                recentScoreIncrease = scoreBonus
+                haptic(.medium)
             } else {
+                // Handle special obstacle properties
+                handleObstacleProperty(obstacle: collidingObstacle, atIndex: collidingIndex)
+                
                 // Lives system
                 lives -= 1
                 if lives <= 0 {
                     endGame()
                 } else {
-                    // Remove the colliding obstacle and show damage feedback
-                    spawnExplosion(at: collidingObstacle.x, y: collidingObstacle.y, color: .white, count: 10)
-                    obstacles.remove(at: collidingIndex)
+                    // Remove the colliding obstacle if still exists and show damage feedback
+                    if obstacles.indices.contains(collidingIndex) {
+                        spawnExplosion(at: collidingObstacle.x, y: collidingObstacle.y, color: .white, count: 10)
+                        obstacles.remove(at: collidingIndex)
+                    }
                     haptic(.heavy)
                 }
+            }
+        }
+    }
+    
+    // MARK: - Obstacle Special Properties
+    
+    private func handleObstacleProperty(obstacle: Obstacle, atIndex index: Int) {
+        switch obstacle.property {
+        case .normal:
+            // Standard collision
+            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 12)
+            
+        case .destructible:
+            // Already handled - can be destroyed by tapping
+            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 12)
+            
+        case .splitting:
+            // Split into 2-3 smaller obstacles
+            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 15)
+            if obstacles.indices.contains(index) {
+                obstacles.remove(at: index)
+            }
+            
+            let splitCount = Int.random(in: 2...3)
+            let newRadius = obstacle.radius * 0.6
+            if newRadius >= GameConstants.obstacleRadiusMin {
+                for i in 0..<splitCount {
+                    let angle = CGFloat(i) * (2 * .pi / CGFloat(splitCount))
+                    let offsetX = cos(angle) * 30
+                    let offsetY = sin(angle) * 30
+                    let newObs = Obstacle(
+                        x: obstacle.x + offsetX,
+                        y: obstacle.y + offsetY,
+                        radius: newRadius,
+                        speed: obstacle.speed * 0.8,
+                        type: .circle,
+                        pattern: .straight,
+                        property: .normal
+                    )
+                    obstacles.append(newObs)
+                }
+            }
+            
+        case .exploding:
+            // Create explosion that affects nearby area
+            spawnExplosion(at: obstacle.x, y: obstacle.y, color: obstacle.property.color, count: 20)
+            if obstacles.indices.contains(index) {
+                obstacles.remove(at: index)
+            }
+            
+            // Destroy nearby obstacles
+            let explosionRadius: CGFloat = 80
+            obstacles.removeAll { other in
+                let dx = other.x - obstacle.x
+                let dy = other.y - obstacle.y
+                let dist = sqrt(dx*dx + dy*dy)
+                if dist < explosionRadius && other.id != obstacle.id {
+                    spawnExplosion(at: other.x, y: other.y, color: .orange, count: 8)
+                    return true
+                }
+                return false
             }
         }
     }
@@ -647,6 +903,7 @@ final class GameEngine: ObservableObject {
             if speedBoostTimeRemaining <= 0 {
                 hasSpeedBoost = false
                 speedBoostTimeRemaining = 0
+                hasInvincibleDash = false  // End invincible dash when speed boost ends
             }
         }
         
@@ -656,6 +913,25 @@ final class GameEngine: ObservableObject {
                 hasFreeze = false
                 freezeTimeRemaining = 0
             }
+        }
+        
+        // Combo timer
+        if activeCombo != nil {
+            comboTimeRemaining -= dt
+            if comboTimeRemaining <= 0 {
+                activeCombo = nil
+                comboTimeRemaining = 0
+            }
+        }
+        
+        // Cooldowns
+        if freezeCooldown > 0 {
+            freezeCooldown -= dt
+            if freezeCooldown < 0 { freezeCooldown = 0 }
+        }
+        if bombCooldown > 0 {
+            bombCooldown -= dt
+            if bombCooldown < 0 { bombCooldown = 0 }
         }
     }
 
@@ -671,9 +947,68 @@ final class GameEngine: ObservableObject {
         // Use difficulty-scaled speed range
         let speedRange = currentObstacleSpeedRange()
         let speed = CGFloat.random(in: speedRange.min...speedRange.max)
+        
+        // Weighted random selection for obstacle features
+        let type = weightedRandomObstacleType()
+        let pattern = weightedRandomMovementPattern()
+        let property = weightedRandomObstacleProperty()
+        
+        // For bouncing pattern, add horizontal velocity
+        let vx: CGFloat = pattern == .bouncing ? CGFloat.random(in: -100...100) : 0
 
-        let obs = Obstacle(x: x, y: y, radius: radius, speed: speed)
+        let obs = Obstacle(
+            x: x, 
+            y: y, 
+            radius: radius, 
+            speed: speed,
+            type: type,
+            pattern: pattern,
+            property: property,
+            sineOffset: 0,
+            sineAmplitude: CGFloat.random(in: 40...80),
+            sineFrequency: CGFloat.random(in: 1.5...3.0),
+            vx: vx
+        )
         obstacles.append(obs)
+    }
+    
+    private func weightedRandomObstacleType() -> ObstacleType {
+        // Start with mostly circles, introduce others as difficulty increases
+        let roll = Int.random(in: 0..<100)
+        if difficultyLevel < 3 { return .circle }
+        if roll < 60 { return .circle }
+        if roll < 80 { return .triangle }
+        if roll < 95 { return .square }
+        return .star
+    }
+    
+    private func weightedRandomMovementPattern() -> MovementPattern {
+        let totalWeight = [MovementPattern.straight, .sine, .tracking, .bouncing]
+            .reduce(0) { $0 + $1.spawnWeight }
+        var random = Int.random(in: 0..<totalWeight)
+        
+        let patterns: [MovementPattern] = [.straight, .sine, .tracking, .bouncing]
+        for pattern in patterns {
+            random -= pattern.spawnWeight
+            if random < 0 { return pattern }
+        }
+        return .straight
+    }
+    
+    private func weightedRandomObstacleProperty() -> ObstacleProperty {
+        // Start with all normal, introduce special properties with difficulty
+        if difficultyLevel < 2 { return .normal }
+        
+        let totalWeight = [ObstacleProperty.normal, .destructible, .splitting, .exploding]
+            .reduce(0) { $0 + $1.spawnWeight }
+        var random = Int.random(in: 0..<totalWeight)
+        
+        let properties: [ObstacleProperty] = [.normal, .destructible, .splitting, .exploding]
+        for property in properties {
+            random -= property.spawnWeight
+            if random < 0 { return property }
+        }
+        return .normal
     }
 
     private func spawnPowerup() {
@@ -715,7 +1050,9 @@ final class GameEngine: ObservableObject {
             let dx = obs.x - player.x
             let dy = obs.y - player.y
             let dist2 = dx*dx + dy*dy
-            let r = obs.radius + player.radius
+            // Adjust collision radius based on obstacle type
+            let adjustedRadius = obs.radius * obs.type.collisionRadius
+            let r = adjustedRadius + player.radius
             if dist2 <= r*r {
                 return index
             }
@@ -760,13 +1097,19 @@ final class GameEngine: ObservableObject {
             checkMilestone(coins: coinsCollected)
 
         case .shield:
+            // Check for combo with Speed Boost
+            if hasSpeedBoost {
+                activateCombo(.shieldSpeedBoost)
+            }
+            
             // In lives mode, shield can restore a life if not at max
             if lives < GameConstants.maxLives && settings.selectedMode != .hardcore {
                 lives += 1
                 showMilestoneNotification("❤️ Life Restored!")
             } else {
                 hasShield = true
-                shieldTimeRemaining = type.duration
+                let duration = type.duration + Double(shieldUpgradeLevel)
+                shieldTimeRemaining = duration
             }
             let points = GameConstants.scorePerPowerup + comboBonus
             score += points
@@ -774,6 +1117,11 @@ final class GameEngine: ObservableObject {
             haptic(.medium)
 
         case .slowMo:
+            // Check for combo with Magnet
+            if hasMagnet {
+                activateCombo(.magnetSlowMo)
+            }
+            
             hasSlowMo = true
             slowMoTimeRemaining = type.duration
             let points = GameConstants.scorePerPowerup + comboBonus
@@ -782,6 +1130,11 @@ final class GameEngine: ObservableObject {
             haptic(.medium)
 
         case .magnet:
+            // Check for combo with Slow-Mo
+            if hasSlowMo {
+                activateCombo(.magnetSlowMo)
+            }
+            
             hasMagnet = true
             magnetTimeRemaining = type.duration
             let points = GameConstants.scorePerPowerup + comboBonus
@@ -790,6 +1143,11 @@ final class GameEngine: ObservableObject {
             haptic(.medium)
             
         case .speedBoost:
+            // Check for combo with Shield
+            if hasShield {
+                activateCombo(.shieldSpeedBoost)
+            }
+            
             hasSpeedBoost = true
             speedBoostTimeRemaining = type.duration
             let points = GameConstants.scorePerPowerup + comboBonus
@@ -798,25 +1156,66 @@ final class GameEngine: ObservableObject {
             haptic(.medium)
             
         case .freeze:
+            // Check cooldown
+            if freezeCooldown > 0 {
+                showMilestoneNotification("❄️ Freeze on cooldown!")
+                return
+            }
+            
             hasFreeze = true
             freezeTimeRemaining = type.duration
+            freezeCooldown = 10.0  // 10 second cooldown
             let points = GameConstants.scorePerPowerup + comboBonus
             score += points
             recentScoreIncrease = points
             haptic(.medium)
             
         case .bomb:
+            // Check cooldown
+            if bombCooldown > 0 {
+                showMilestoneNotification("💥 Bomb on cooldown!")
+                return
+            }
+            
+            // Check for combo with Freeze (Ice Blast)
+            if hasFreeze {
+                activateCombo(.freezeBomb)
+                // Ice blast: clear screen and extend freeze
+                freezeTimeRemaining += 2.0
+            }
+            
             // Destroy all obstacles on screen
             let obstacleCount = obstacles.count
             for obs in obstacles {
-                spawnExplosion(at: obs.x, y: obs.y, color: .red, count: 6)
+                spawnExplosion(at: obs.x, y: obs.y, color: activeCombo == .freezeBomb ? .blue : .red, count: 6)
             }
             obstacles.removeAll()
+            bombCooldown = 8.0  // 8 second cooldown
             let points = GameConstants.scorePerPowerup + (obstacleCount * GameConstants.scorePerBombDestroy) + comboBonus
             score += points
             recentScoreIncrease = points
             haptic(.heavy)
             showMilestoneNotification("💥 BOOM! \(obstacleCount) destroyed!")
+        }
+    }
+    
+    private func activateCombo(_ combo: PowerupCombo) {
+        activeCombo = combo
+        comboTimeRemaining = 5.0  // Combo lasts 5 seconds
+        
+        switch combo {
+        case .magnetSlowMo:
+            // Already handled in magnet attraction logic - radius will be boosted
+            showMilestoneNotification("✨ \(combo.name): \(combo.description)")
+            
+        case .shieldSpeedBoost:
+            // Enable invincible dash
+            hasInvincibleDash = true
+            showMilestoneNotification("✨ \(combo.name): \(combo.description)")
+            
+        case .freezeBomb:
+            // Already handled in bomb logic
+            showMilestoneNotification("✨ \(combo.name): \(combo.description)")
         }
     }
     
@@ -957,6 +1356,81 @@ final class GameEngine: ObservableObject {
         let index = settings.playerColorIndex
         guard index < GameSettings.playerColors.count else { return .white }
         return GameSettings.playerColors[index]
+    }
+    
+    // MARK: - Powerup Upgrades
+    
+    func canAffordUpgrade(for type: PowerupType, currentLevel: Int) -> Bool {
+        let cost = upgradeCost(for: type, level: currentLevel)
+        return totalCoinsCollected >= cost
+    }
+    
+    func upgradeCost(for type: PowerupType, level: Int) -> Int {
+        // Base cost increases with each level
+        let baseCost = 100
+        return baseCost + (level * 50)
+    }
+    
+    func upgradePowerup(type: PowerupType) -> Bool {
+        switch type {
+        case .shield:
+            let cost = upgradeCost(for: type, level: shieldUpgradeLevel)
+            guard canAffordUpgrade(for: type, currentLevel: shieldUpgradeLevel) else { return false }
+            totalCoinsCollected -= cost
+            shieldUpgradeLevel += 1
+            saveStatistics()
+            saveUpgrades()
+            haptic(.medium)
+            return true
+            
+        case .magnet:
+            let cost = upgradeCost(for: type, level: magnetUpgradeLevel)
+            guard canAffordUpgrade(for: type, currentLevel: magnetUpgradeLevel) else { return false }
+            totalCoinsCollected -= cost
+            magnetUpgradeLevel += 1
+            saveStatistics()
+            saveUpgrades()
+            haptic(.medium)
+            return true
+            
+        default:
+            return false
+        }
+    }
+    
+    private func loadUpgrades() {
+        shieldUpgradeLevel = UserDefaults.standard.integer(forKey: shieldUpgradeKey)
+        magnetUpgradeLevel = UserDefaults.standard.integer(forKey: magnetUpgradeKey)
+    }
+    
+    private func saveUpgrades() {
+        UserDefaults.standard.set(shieldUpgradeLevel, forKey: shieldUpgradeKey)
+        UserDefaults.standard.set(magnetUpgradeLevel, forKey: magnetUpgradeKey)
+    }
+    
+    // MARK: - Tap to Destroy Destructible Obstacles
+    
+    func tapAtLocation(x: CGFloat, y: CGFloat) {
+        guard state == .playing else { return }
+        
+        // Check if tapped on a destructible obstacle
+        for (index, obs) in obstacles.enumerated().reversed() {
+            let dx = obs.x - x
+            let dy = obs.y - y
+            let dist = sqrt(dx*dx + dy*dy)
+            
+            if dist < obs.radius + 20 && obs.property == .destructible {
+                // Destroy the obstacle
+                let scoreBonus = 15 * obs.type.scoreMultiplier
+                score += scoreBonus
+                recentScoreIncrease = scoreBonus
+                spawnExplosion(at: obs.x, y: obs.y, color: .orange, count: 10)
+                obstacles.remove(at: index)
+                haptic(.light)
+                showMilestoneNotification("💥 +\(scoreBonus) pts!")
+                return  // Only destroy one obstacle per tap
+            }
+        }
     }
 
     // MARK: - Haptics
