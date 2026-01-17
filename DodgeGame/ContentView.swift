@@ -565,270 +565,92 @@ struct ContentView:  View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 // Title with glow effect
-                Text("🎮 Dodge Game")
-                    .font(.largeTitle.weight(.heavy))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.white, .cyan.opacity(0.9)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: .cyan.opacity(0.5), radius: 10)
-                    .padding(.top, 4)
-
+                titleText
+                
                 // Game Mode Selector with glass effect
-                VStack(spacing: 10) {
-                    Text("Game Mode")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.8))
-                    
-                    HStack(spacing: 8) {
-                        ForEach(GameMode.allCases) { mode in
-                            Button {
-                                engine.settings.selectedMode = mode
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Text(mode.rawValue)
-                                        .font(.caption.bold())
-                                    if mode == .timeAttack {
-                                        Text("\(engine.settings.timeAttackDuration)s")
-                                            .font(.caption2)
-                                    }
-                                }
-                                .foregroundStyle(engine.settings.selectedMode == mode ? .black : .white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    Group {
-                                        if engine.settings.selectedMode == mode {
-                                            Color.white
-                                        } else {
-                                            Color.white.opacity(0.15)
-                                        }
-                                    }
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.white.opacity(engine.settings.selectedMode == mode ? 0 : 0.3), lineWidth: 1)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .shadow(color: engine.settings.selectedMode == mode ? .white.opacity(0.3) : .clear, radius: 8)
-                            }
-                        }
-                    }
-                    
-                    Text(engine.settings.selectedMode.description)
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.7))
-                        .padding(.top, 2)
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white.opacity(0.05))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                )
-
+                GameModeSelector(engine: engine)
+                
                 // Powerups Legend with glass containers
-                VStack(spacing: 8) {
-                    HStack(spacing: 10) {
-                        powerupLegend(icon: "star.circle.fill", color: .yellow, text: "Coins")
-                        powerupLegend(icon: "shield.fill", color: .cyan, text: "Shield/Life")
-                        powerupLegend(icon: "clock.fill", color: .orange, text: "Slow")
-                    }
-                    HStack(spacing: 10) {
-                        powerupLegend(icon: "magnet", color: .purple, text: "Magnet")
-                        powerupLegend(icon: "bolt.fill", color: .green, text: "Speed")
-                        powerupLegend(icon: "snowflake", color: .blue, text: "Freeze")
-                    }
-                    HStack(spacing: 10) {
-                        powerupLegend(icon: "flame.fill", color: .red, text: "Bomb")
-                        Spacer().frame(width: 60)
-                        Spacer().frame(width: 60)
-                    }
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white.opacity(0.05))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                )
-
+                PowerupsLegend()
+                
                 // Statistics display with enhanced glass effect
                 if engine.totalGamesPlayed > 0 {
-                    HStack(spacing: 16) {
-                        VStack(spacing: 3) {
-                            Text("\(engine.totalGamesPlayed)")
-                                .font(.title3.bold())
-                                .foregroundStyle(.white)
-                            Text("Games")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        Divider()
-                            .background(Color.white.opacity(0.3))
-                            .frame(height: 30)
-                        
-                        VStack(spacing: 3) {
-                            Text("\(engine.totalCoinsCollected)")
-                                .font(.title3.bold())
-                                .foregroundStyle(.yellow)
-                            Text("Total Coins")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        Divider()
-                            .background(Color.white.opacity(0.3))
-                            .frame(height: 30)
-                        
-                        VStack(spacing: 3) {
-                            Text("\(engine.bestScore)")
-                                .font(.title3.bold())
-                                .foregroundStyle(.green)
-                            Text("Best Score")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white.opacity(0.08))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.4), .white.opacity(0.1)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1.5
-                                    )
-                            )
+                    StatisticsDisplay(
+                        totalGamesPlayed: engine.totalGamesPlayed,
+                        totalCoinsCollected: engine.totalCoinsCollected,
+                        bestScore: engine.bestScore
                     )
-                    .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
                 }
-
+                
                 // Buttons with enhanced styling
-                VStack(spacing: 12) {
-                    Button {
-                        engine.startGame()
-                    } label: {
-                        Text("START")
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(.black)
-                            .padding(.vertical, 16)
-                            .frame(maxWidth: 240)
-                            .background(
-                                LinearGradient(
-                                    colors: [.white, .white.opacity(0.9)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .shadow(color: .white.opacity(0.5), radius: 15, y: 5)
-                    }
-                    
-                    Button {
-                        engine.showSettings = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "gearshape.fill")
-                            Text("Settings")
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: 200)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(Color.white.opacity(0.15))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                }
-                .padding(.top, 4)
+                actionButtons
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
         }
-        .background(
-            ZStack {
-                // Liquid glass effect with multiple layers
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                
-                // Gradient overlay for depth
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(
+        .glassBackground()
+        .padding(.horizontal, 20)
+        .padding(.vertical, 30)
+    }
+    
+    private var titleText: some View {
+        Text("🎮 Dodge Game")
+            .font(.largeTitle.weight(.heavy))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [.white, .cyan.opacity(0.9)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .shadow(color: .cyan.opacity(0.5), radius: 10)
+            .padding(.top, 4)
+    }
+    
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+            Button {
+                engine.startGame()
+            } label: {
+                Text("START")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.black)
+                    .padding(.vertical, 16)
+                    .frame(maxWidth: 240)
+                    .background(
                         LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.15),
-                                Color.white.opacity(0.05),
-                                Color.cyan.opacity(0.08),
-                                Color.purple.opacity(0.05)
-                            ],
+                            colors: [.white, .white.opacity(0.9)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                
-                // Border gradient for liquid glass effect
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.6),
-                                Color.cyan.opacity(0.4),
-                                Color.white.opacity(0.2),
-                                Color.purple.opacity(0.3)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 2
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .white.opacity(0.5), radius: 15, y: 5)
             }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-        .shadow(color: .cyan.opacity(0.2), radius: 30, y: 15)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 30)
+            
+            Button {
+                engine.showSettings = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "gearshape.fill")
+                    Text("Settings")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.vertical, 12)
+                .frame(maxWidth: 200)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.white.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+        }
+        .padding(.top, 4)
     }
     
     // MARK: - Settings Panel
@@ -837,278 +659,64 @@ struct ContentView:  View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 18) {
                 // Title with gradient
-                Text("⚙️ Settings")
-                    .font(.title.weight(.heavy))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.white, .cyan.opacity(0.9)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: .cyan.opacity(0.5), radius: 10)
-                    .padding(.top, 4)
+                settingsTitle
                 
                 // Haptic Toggle with glass effect
-                VStack(spacing: 8) {
-                    Toggle(isOn: $engine.settings.hapticEnabled) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "iphone.radiowaves.left.and.right")
-                            Text("Haptic Feedback")
-                        }
-                        .foregroundStyle(.white)
-                    }
-                    .tint(.green)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.white.opacity(0.08))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                )
+                HapticToggle(engine: engine)
                 
                 // Time Attack Duration with glass effect
                 if engine.settings.selectedMode == .timeAttack {
-                    VStack(spacing: 10) {
-                        Text("Time Attack Duration")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white.opacity(0.8))
-                        
-                        HStack(spacing: 10) {
-                            ForEach(GameConstants.timeAttackDurations, id: \.self) { duration in
-                                Button {
-                                    engine.settings.timeAttackDuration = duration
-                                } label: {
-                                    Text("\(duration)s")
-                                        .font(.subheadline.bold())
-                                        .foregroundStyle(engine.settings.timeAttackDuration == duration ? .black : .white)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            Group {
-                                                if engine.settings.timeAttackDuration == duration {
-                                                    Color.white
-                                                } else {
-                                                    Color.white.opacity(0.15)
-                                                }
-                                            }
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .stroke(Color.white.opacity(engine.settings.timeAttackDuration == duration ? 0 : 0.3), lineWidth: 1)
-                                        )
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color.white.opacity(0.08))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.3), .white.opacity(0.1)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1
-                                    )
-                            )
-                    )
+                    TimeAttackDurationSelector(engine: engine)
                 }
                 
                 // Player Color Selection with glass effect
-                VStack(spacing: 14) {
-                    Text("Player Color")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white.opacity(0.8))
-                    
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 70))], spacing: 10) {
-                        ForEach(0..<GameSettings.playerColors.count, id: \.self) { index in
-                            let color = GameSettings.playerColors[index]
-                            let name = GameSettings.playerColorNames[index]
-                            let cost = GameSettings.playerColorCosts[index]
-                            let isUnlocked = engine.unlockedColors.contains(index)
-                            let isSelected = engine.settings.playerColorIndex == index
-                            
-                            Button {
-                                if isUnlocked {
-                                    engine.selectColor(index: index)
-                                } else if engine.canAffordColor(index: index) {
-                                    _ = engine.unlockColor(index: index)
-                                }
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Circle()
-                                        .fill(color)
-                                        .frame(width: 32, height: 32)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(isSelected ? Color.white : Color.clear, lineWidth: 3)
-                                        )
-                                        .shadow(color: isSelected ? color.opacity(0.6) : .clear, radius: 10)
-                                    
-                                    Text(name)
-                                        .font(.caption2)
-                                        .foregroundStyle(.white)
-                                    
-                                    if !isUnlocked {
-                                        HStack(spacing: 2) {
-                                            Image(systemName: "lock.fill")
-                                                .font(.system(size: 8))
-                                            Text("\(cost)")
-                                                .font(.caption2)
-                                        }
-                                        .foregroundStyle(engine.canAffordColor(index: index) ? .yellow : .gray)
-                                    }
-                                }
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(isSelected ? color.opacity(0.2) : Color.white.opacity(0.08))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(isSelected ? color.opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
-                                        )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                        }
-                    }
-                    
-                    HStack(spacing: 6) {
-                        Image(systemName: "star.circle.fill")
-                            .foregroundStyle(.yellow)
-                        Text("Your coins: \(engine.totalCoinsCollected)")
-                            .font(.caption.bold())
-                            .foregroundStyle(.yellow)
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(
-                        Capsule()
-                            .fill(Color.yellow.opacity(0.15))
-                            .overlay(Capsule().stroke(Color.yellow.opacity(0.3), lineWidth: 1))
-                    )
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.white.opacity(0.08))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.3), .white.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                )
+                PlayerColorGrid(engine: engine)
                 
-                Button {
-                    engine.saveSettings()
-                    engine.showSettings = false
-                } label: {
-                    Text("Done")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.black)
-                        .padding(.vertical, 14)
-                        .frame(maxWidth: 200)
-                        .background(
-                            LinearGradient(
-                                colors: [.white, .white.opacity(0.9)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .shadow(color: .white.opacity(0.5), radius: 15, y: 5)
-                }
+                // Done button
+                doneButton
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
         }
-        .background(
-            ZStack {
-                // Liquid glass effect
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                
-                // Gradient overlay
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.15),
-                                Color.white.opacity(0.05),
-                                Color.cyan.opacity(0.08),
-                                Color.purple.opacity(0.05)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                
-                // Border gradient
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.6),
-                                Color.cyan.opacity(0.4),
-                                Color.white.opacity(0.2),
-                                Color.purple.opacity(0.3)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 2
-                    )
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-        .shadow(color: .cyan.opacity(0.2), radius: 30, y: 15)
+        .glassBackground()
         .padding(.horizontal, 20)
         .padding(.vertical, 30)
     }
-
-    private func powerupLegend(icon: String, color: Color, text: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .font(.system(size: 14))
-                .shadow(color: color.opacity(0.5), radius: 4)
-            Text(text)
-                .font(.caption2.weight(.medium))
-                .foregroundColor(.white.opacity(0.9))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            Capsule()
-                .fill(color.opacity(0.15))
-                .overlay(
-                    Capsule()
-                        .stroke(color.opacity(0.3), lineWidth: 1)
+    
+    private var settingsTitle: some View {
+        Text("⚙️ Settings")
+            .font(.title.weight(.heavy))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [.white, .cyan.opacity(0.9)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-        )
+            )
+            .shadow(color: .cyan.opacity(0.5), radius: 10)
+            .padding(.top, 4)
+    }
+    
+    private var doneButton: some View {
+        Button {
+            engine.saveSettings()
+            engine.showSettings = false
+        } label: {
+            Text("Done")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.black)
+                .padding(.vertical, 14)
+                .frame(maxWidth: 200)
+                .background(
+                    LinearGradient(
+                        colors: [.white, .white.opacity(0.9)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: .white.opacity(0.5), radius: 15, y: 5)
+        }
     }
 
     private var gameOverPanel: some View {
