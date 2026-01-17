@@ -105,6 +105,10 @@ final class GameEngine: ObservableObject {
     @Published var score: Int = 0
     @Published var bestScore: Int = 0
     @Published var coinsCollected:  Int = 0
+    @Published var totalGamesPlayed: Int = 0
+    @Published var totalCoinsCollected: Int = 0
+    @Published var currentDifficultyLevel: Int = 0
+    @Published var difficultyJustIncreased: Bool = false
 
     @Published var player: Player = Player(x: 0, y:  0, radius: 18)
     @Published var obstacles: [Obstacle] = []
@@ -156,9 +160,12 @@ final class GameEngine: ObservableObject {
 
     // Persistence
     private let bestScoreKey = "DodgeGame_BestScore"
+    private let totalGamesKey = "DodgeGame_TotalGames"
+    private let totalCoinsKey = "DodgeGame_TotalCoins"
 
     init() {
         loadBestScore()
+        loadStatistics()
     }
 
     // MARK: - Setup
@@ -212,6 +219,8 @@ final class GameEngine: ObservableObject {
         gameTime = 0
         lastDifficultyIncrease = 0
         difficultyLevel = 0
+        currentDifficultyLevel = 0
+        difficultyJustIncreased = false
         obstacleSpawnInterval = baseSpawnInterval
         powerupSpawnInterval = 2.5
         obstacleSpawnCooldown = 0
@@ -254,6 +263,11 @@ final class GameEngine: ObservableObject {
             bestScore = score
             saveBestScore()
         }
+
+        // Update statistics
+        totalGamesPlayed += 1
+        totalCoinsCollected += coinsCollected
+        saveStatistics()
 
         spawnExplosion(at: player.x, y: player.y, color: .white, count: 20)
         haptic(.heavy)
@@ -409,6 +423,13 @@ final class GameEngine: ObservableObject {
         if gameTime - lastDifficultyIncrease >= difficultyIncreaseInterval {
             lastDifficultyIncrease = gameTime
             difficultyLevel += 1
+            currentDifficultyLevel = difficultyLevel
+            
+            // Trigger visual feedback
+            difficultyJustIncreased = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.difficultyJustIncreased = false
+            }
             
             // Decrease spawn interval (more obstacles spawn)
             // Minimum spawn interval is 0.2 seconds
@@ -416,6 +437,9 @@ final class GameEngine: ObservableObject {
             
             // Also slightly decrease powerup spawn interval to help player
             powerupSpawnInterval = max(1.5, 2.5 - (Double(difficultyLevel) * 0.05))
+            
+            // Add haptic feedback for difficulty increase
+            haptic(.medium)
             
             print("Difficulty increased to level \(difficultyLevel)!  Speed bonus: +\(CGFloat(difficultyLevel) * speedIncreasePerLevel), Spawn interval: \(obstacleSpawnInterval)")
         }
@@ -609,6 +633,16 @@ final class GameEngine: ObservableObject {
 
     private func saveBestScore() {
         UserDefaults.standard.set(bestScore, forKey: bestScoreKey)
+    }
+
+    private func loadStatistics() {
+        totalGamesPlayed = UserDefaults.standard.integer(forKey: totalGamesKey)
+        totalCoinsCollected = UserDefaults.standard.integer(forKey: totalCoinsKey)
+    }
+
+    private func saveStatistics() {
+        UserDefaults.standard.set(totalGamesPlayed, forKey: totalGamesKey)
+        UserDefaults.standard.set(totalCoinsCollected, forKey: totalCoinsKey)
     }
 
     // MARK: - Haptics

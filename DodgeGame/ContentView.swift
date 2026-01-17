@@ -345,6 +345,24 @@ struct ContentView:  View {
 
             Spacer()
 
+            // Difficulty level indicator (only during gameplay)
+            if engine.state == .playing {
+                VStack(spacing: 2) {
+                    Text("Level")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text("\(engine.currentDifficultyLevel)")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(engine.difficultyJustIncreased ? .red : .orange)
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(engine.difficultyJustIncreased ? .red.opacity(0.3) : .orange.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .scaleEffect(engine.difficultyJustIncreased ? 1.15 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: engine.difficultyJustIncreased)
+            }
+
             // Coins collected
             if engine.state == .playing {
                 HStack(spacing: 4) {
@@ -428,6 +446,37 @@ struct ContentView:  View {
             }
             .padding(.vertical, 8)
 
+            // Statistics display
+            if engine.totalGamesPlayed > 0 {
+                VStack(spacing: 4) {
+                    Text("📊 Your Stats")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.7))
+                    HStack(spacing: 20) {
+                        VStack(spacing: 2) {
+                            Text("\(engine.totalGamesPlayed)")
+                                .font(.headline.bold())
+                                .foregroundStyle(.white)
+                            Text("Games")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        VStack(spacing: 2) {
+                            Text("\(engine.totalCoinsCollected)")
+                                .font(.headline.bold())
+                                .foregroundStyle(.yellow)
+                            Text("Total Coins")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .background(.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
             Button {
                 engine.startGame()
             } label: {
@@ -473,11 +522,20 @@ struct ContentView:  View {
                         .foregroundColor(.yellow)
                 }
 
-                Text("Coins: \(engine.coinsCollected)")
-                    .foregroundStyle(.white.opacity(0.7))
+                HStack(spacing: 20) {
+                    VStack(spacing: 2) {
+                        Text("Coins: \(engine.coinsCollected)")
+                            .foregroundStyle(.yellow)
+                        Text("Level Reached: \(engine.currentDifficultyLevel)")
+                            .foregroundStyle(.orange)
+                    }
+                    .font(.subheadline)
+                }
+                .padding(.top, 4)
 
                 Text("Best: \(engine.bestScore)")
                     . foregroundStyle(.white.opacity(0.7))
+                    .padding(.top, 2)
             }
 
             HStack(spacing: 12) {
