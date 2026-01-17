@@ -29,8 +29,8 @@ enum PowerupType: CaseIterable {
 
     var color: Color {
         switch self {
-        case .coin: return . yellow
-        case .shield: return . cyan
+        case .coin: return .yellow
+        case .shield: return .cyan
         case .slowMo: return .orange
         case .magnet: return .purple
         }
@@ -38,7 +38,7 @@ enum PowerupType: CaseIterable {
 
     var icon: String {
         switch self {
-        case .coin: return "star. circle.fill"
+        case .coin: return "star.circle.fill"
         case .shield: return "shield.fill"
         case .slowMo: return "clock.fill"
         case .magnet: return "magnet"
@@ -105,6 +105,17 @@ final class GameEngine: ObservableObject {
     @Published var score: Int = 0
     @Published var bestScore: Int = 0
     @Published var coinsCollected:  Int = 0
+    @Published var totalGamesPlayed: Int = 0
+    @Published var totalCoinsCollected: Int = 0
+    @Published var currentDifficultyLevel: Int = 0
+    @Published var difficultyJustIncreased: Bool = false
+    @Published var recentScoreIncrease: Int = 0
+    @Published var showMilestone: Bool = false
+    @Published var milestoneText: String = ""
+    
+    // Milestone tracking - track which milestones achieved this game
+    private var lastScoreMilestone: Int = 0
+    private var achievedCoinMilestones: Set<Int> = []
 
     @Published var player: Player = Player(x: 0, y:  0, radius: 18)
     @Published var obstacles: [Obstacle] = []
@@ -156,9 +167,12 @@ final class GameEngine: ObservableObject {
 
     // Persistence
     private let bestScoreKey = "DodgeGame_BestScore"
+    private let totalGamesKey = "DodgeGame_TotalGames"
+    private let totalCoinsKey = "DodgeGame_TotalCoins"
 
     init() {
         loadBestScore()
+        loadStatistics()
     }
 
     // MARK: - Setup
@@ -212,6 +226,11 @@ final class GameEngine: ObservableObject {
         gameTime = 0
         lastDifficultyIncrease = 0
         difficultyLevel = 0
+        currentDifficultyLevel = 0
+        difficultyJustIncreased = false
+        lastScoreMilestone = 0
+        achievedCoinMilestones.removeAll()
+        recentScoreIncrease = 0
         obstacleSpawnInterval = baseSpawnInterval
         powerupSpawnInterval = 2.5
         obstacleSpawnCooldown = 0
@@ -254,6 +273,11 @@ final class GameEngine: ObservableObject {
             bestScore = score
             saveBestScore()
         }
+
+        // Update statistics
+        totalGamesPlayed += 1
+        totalCoinsCollected += coinsCollected
+        saveStatistics()
 
         spawnExplosion(at: player.x, y: player.y, color: .white, count: 20)
         haptic(.heavy)
@@ -307,6 +331,9 @@ final class GameEngine: ObservableObject {
 
         // 2) Score increases with time
         score += Int(dt * 10.0)
+        
+        // Check for score milestones
+        checkScoreMilestone(currentScore: score)
 
         // 3) Update combo timer
         if combo > 0 {
@@ -396,6 +423,7 @@ final class GameEngine: ObservableObject {
 
                 haptic(.medium)
                 score += 15
+                recentScoreIncrease = 15
             } else {
                 endGame()
             }
@@ -409,6 +437,13 @@ final class GameEngine: ObservableObject {
         if gameTime - lastDifficultyIncrease >= difficultyIncreaseInterval {
             lastDifficultyIncrease = gameTime
             difficultyLevel += 1
+            currentDifficultyLevel = difficultyLevel
+            
+            // Trigger visual feedback
+            difficultyJustIncreased = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.difficultyJustIncreased = false
+            }
             
             // Decrease spawn interval (more obstacles spawn)
             // Minimum spawn interval is 0.2 seconds
@@ -416,6 +451,9 @@ final class GameEngine: ObservableObject {
             
             // Also slightly decrease powerup spawn interval to help player
             powerupSpawnInterval = max(1.5, 2.5 - (Double(difficultyLevel) * 0.05))
+            
+            // Add haptic feedback for difficulty increase
+            haptic(.medium)
             
             print("Difficulty increased to level \(difficultyLevel)!  Speed bonus: +\(CGFloat(difficultyLevel) * speedIncreasePerLevel), Spawn interval: \(obstacleSpawnInterval)")
         }
@@ -546,32 +584,84 @@ final class GameEngine: ObservableObject {
         case . coin:
             let points = 25 + comboBonus
             score += points
+            recentScoreIncrease = points
             coinsCollected += 1
             haptic(.light)
+            
+            // Milestone achievements for coins
+            checkMilestone(coins: coinsCollected)
 
         case .shield:
             hasShield = true
             shieldTimeRemaining = type.duration
-            score += 10 + comboBonus
+            let points = 10 + comboBonus
+            score += points
+            recentScoreIncrease = points
             haptic(.medium)
 
         case .slowMo:
             hasSlowMo = true
             slowMoTimeRemaining = type.duration
-            score += 10 + comboBonus
+            let points = 10 + comboBonus
+            score += points
+            recentScoreIncrease = points
             haptic(.medium)
 
         case .magnet:
             hasMagnet = true
             magnetTimeRemaining = type.duration
-            score += 10 + comboBonus
+            let points = 10 + comboBonus
+            score += points
+            recentScoreIncrease = points
             haptic(.medium)
+        }
+    }
+    
+    // MARK: - Milestone System
+    
+    // Define milestone thresholds as static constants
+    private static let coinMilestones: Set<Int> = [10, 25, 50, 100, 250, 500]
+    private static let scoreMilestones: [Int] = [100, 250, 500, 1000, 2500, 5000, 10000]
+    
+    private func checkMilestone(coins: Int) {
+        // Check if we just hit a milestone and haven't achieved it yet this game
+        if Self.coinMilestones.contains(coins) && !achievedCoinMilestones.contains(coins) {
+            achievedCoinMilestones.insert(coins)
+            showMilestoneNotification("🎯 \(coins) Coins Collected!")
+        }
+    }
+    
+    private func checkScoreMilestone(currentScore: Int) {
+        for milestone in Self.scoreMilestones {
+            if currentScore >= milestone && lastScoreMilestone < milestone {
+                lastScoreMilestone = milestone
+                showMilestoneNotification("⭐ Score: \(milestone)!")
+                break
+            }
+        }
+    }
+    
+    private func showMilestoneNotification(_ text: String) {
+        milestoneText = text
+        showMilestone = true
+        haptic(.heavy)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.showMilestone = false
         }
     }
 
     // MARK: - Particles
 
     private func spawnExplosion(at x:  CGFloat, y: CGFloat, color: Color, count: Int) {
+        // Limit total particles to prevent performance issues
+        let maxParticles = 150
+        let futureCount = particles.count + count
+        if futureCount > maxParticles {
+            let toRemove = futureCount - maxParticles
+            particles.removeFirst(toRemove)
+        }
+        
         for _ in 0..<count {
             let angle = CGFloat.random(in: 0...(2 * .pi))
             let speed = CGFloat.random(in: 50...150)
@@ -609,6 +699,16 @@ final class GameEngine: ObservableObject {
 
     private func saveBestScore() {
         UserDefaults.standard.set(bestScore, forKey: bestScoreKey)
+    }
+
+    private func loadStatistics() {
+        totalGamesPlayed = UserDefaults.standard.integer(forKey: totalGamesKey)
+        totalCoinsCollected = UserDefaults.standard.integer(forKey: totalCoinsKey)
+    }
+
+    private func saveStatistics() {
+        UserDefaults.standard.set(totalGamesPlayed, forKey: totalGamesKey)
+        UserDefaults.standard.set(totalCoinsCollected, forKey: totalCoinsKey)
     }
 
     // MARK: - Haptics

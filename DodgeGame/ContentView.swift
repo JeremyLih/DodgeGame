@@ -5,6 +5,8 @@ struct ContentView:  View {
     @StateObject private var engine = GameEngine()
     @State private var showCombo = false
     @State private var comboScale: CGFloat = 1.0
+    @State private var scorePopupOffset: CGFloat = 0
+    @State private var scorePopupOpacity: Double = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -36,6 +38,16 @@ struct ContentView:  View {
                 if showCombo && engine.combo > 1 {
                     comboIndicator
                 }
+                
+                // Milestone achievement notification
+                if engine.showMilestone {
+                    milestoneNotification
+                }
+                
+                // Score popup animation
+                if engine.recentScoreIncrease > 0 && scorePopupOpacity > 0 {
+                    scorePopup
+                }
 
                 // HUD 顶部信息
                 hudOverlay
@@ -60,6 +72,21 @@ struct ContentView:  View {
                     if engine.combo == newValue {
                         withAnimation { showCombo = false }
                     }
+                }
+            }
+        }
+        .onChange(of: engine.recentScoreIncrease) { oldValue, newValue in
+            if newValue > 0 {
+                // Animate score popup
+                scorePopupOffset = 0
+                scorePopupOpacity = 1.0
+                withAnimation(.easeOut(duration: 1.0)) {
+                    scorePopupOffset = -40
+                    scorePopupOpacity = 0
+                }
+                // Reset after animation completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak engine] in
+                    engine?.recentScoreIncrease = 0
                 }
             }
         }
@@ -335,6 +362,39 @@ struct ContentView:  View {
         .scaleEffect(comboScale)
         .position(x: UIScreen.main.bounds.width / 2, y: 150)
     }
+    
+    // MARK: - Milestone Notification
+    
+    private var milestoneNotification: some View {
+        Text(engine.milestoneText)
+            .font(.title2.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [.purple, .blue],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .opacity(0.9)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .purple.opacity(0.5), radius: 20)
+            .position(x: UIScreen.main.bounds.width / 2, y: 200)
+            .transition(.scale.combined(with: .opacity))
+    }
+    
+    // MARK: - Score Popup
+    
+    private var scorePopup: some View {
+        Text("+\(engine.recentScoreIncrease)")
+            .font(.title3.bold())
+            .foregroundStyle(.yellow)
+            .shadow(color: .black.opacity(0.5), radius: 2)
+            .offset(x: engine.player.x, y: engine.player.y + scorePopupOffset - 40)
+            .opacity(scorePopupOpacity)
+    }
 
     // MARK: - HUD
 
@@ -344,6 +404,24 @@ struct ContentView:  View {
             hudPill(title: "Best", value: "\(engine.bestScore)", highlight: engine.score > 0 && engine.score >= engine.bestScore)
 
             Spacer()
+
+            // Difficulty level indicator (only during gameplay)
+            if engine.state == .playing {
+                VStack(spacing: 2) {
+                    Text("Level")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text("\(engine.currentDifficultyLevel)")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(engine.difficultyJustIncreased ? .red : .orange)
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(engine.difficultyJustIncreased ? .red.opacity(0.3) : .orange.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .scaleEffect(engine.difficultyJustIncreased ? 1.15 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: engine.difficultyJustIncreased)
+            }
 
             // Coins collected
             if engine.state == .playing {
@@ -428,6 +506,37 @@ struct ContentView:  View {
             }
             .padding(.vertical, 8)
 
+            // Statistics display
+            if engine.totalGamesPlayed > 0 {
+                VStack(spacing: 4) {
+                    Text("📊 Your Stats")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.7))
+                    HStack(spacing: 20) {
+                        VStack(spacing: 2) {
+                            Text("\(engine.totalGamesPlayed)")
+                                .font(.headline.bold())
+                                .foregroundStyle(.white)
+                            Text("Games")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        VStack(spacing: 2) {
+                            Text("\(engine.totalCoinsCollected)")
+                                .font(.headline.bold())
+                                .foregroundStyle(.yellow)
+                            Text("Total Coins")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .background(.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
             Button {
                 engine.startGame()
             } label: {
@@ -473,11 +582,20 @@ struct ContentView:  View {
                         .foregroundColor(.yellow)
                 }
 
-                Text("Coins: \(engine.coinsCollected)")
-                    .foregroundStyle(.white.opacity(0.7))
+                HStack(spacing: 20) {
+                    VStack(spacing: 2) {
+                        Text("Coins: \(engine.coinsCollected)")
+                            .foregroundStyle(.yellow)
+                        Text("Level Reached: \(engine.currentDifficultyLevel)")
+                            .foregroundStyle(.orange)
+                    }
+                    .font(.subheadline)
+                }
+                .padding(.top, 4)
 
                 Text("Best: \(engine.bestScore)")
-                    . foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.top, 2)
             }
 
             HStack(spacing: 12) {
