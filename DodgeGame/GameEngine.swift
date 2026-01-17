@@ -37,6 +37,7 @@ enum GameConstants {
     
     // Particles
     static let maxParticles: Int = 150
+    static let rainbowColors: [Color] = [.red, .orange, .yellow, .green, .cyan, .blue, .purple]
     
     // Scoring
     static let scorePerSecond: Int = 10
@@ -171,6 +172,12 @@ struct Powerup:  Identifiable {
 
 // MARK: - Particle System
 
+enum ParticleType {
+    case explosion
+    case trail
+    case powerupAura
+}
+
 struct Particle: Identifiable {
     let id = UUID()
     var x: CGFloat
@@ -182,6 +189,21 @@ struct Particle: Identifiable {
     var opacity: Double
     var lifetime: Double
     var age: Double = 0
+    var type: ParticleType = .explosion
+    var isPooled: Bool = false
+}
+
+// MARK: - Trail Particle
+
+struct TrailParticle: Identifiable {
+    let id = UUID()
+    var x: CGFloat
+    var y: CGFloat
+    var opacity: Double
+    var size: CGFloat
+    var color: Color
+    var age: Double = 0
+    var lifetime: Double = 0.5
 }
 
 // MARK: - Game Engine
@@ -231,6 +253,14 @@ final class GameEngine: ObservableObject {
     @Published var obstacles: [Obstacle] = []
     @Published var powerups: [Powerup] = []
     @Published var particles: [Particle] = []
+    @Published var trailParticles: [TrailParticle] = []
+    
+    // Theme manager
+    @Published var themeManager: ThemeManager = ThemeManager()
+    
+    // Achievement tracking
+    @Published var totalObstaclesDodged: Int = 0
+    @Published var newlyUnlockedAchievement: Achievement? = nil
 
     // Powerup states
     @Published var hasShield: Bool = false
@@ -247,6 +277,14 @@ final class GameEngine: ObservableObject {
     // Combo system
     @Published var combo: Int = 0
     private var comboTimer: Double = 0
+    
+    // Particle pooling
+    private var particlePool: [Particle] = []
+    private let maxPoolSize: Int = 100
+    
+    // Trail spawning
+    private var trailSpawnCooldown: Double = 0
+    private let trailSpawnInterval: Double = 0.05
 
     // World sizing
     private(set) var worldWidth: CGFloat = 320
@@ -272,6 +310,7 @@ final class GameEngine: ObservableObject {
     private let bestScoreKey = "DodgeGame_BestScore"
     private let totalGamesKey = "DodgeGame_TotalGames"
     private let totalCoinsKey = "DodgeGame_TotalCoins"
+    private let totalObstaclesDodgedKey = "DodgeGame_TotalObstaclesDodged"
     private let unlockedColorsKey = "DodgeGame_UnlockedColors"
     private let settingsHapticKey = "DodgeGame_HapticEnabled"
     private let settingsColorKey = "DodgeGame_PlayerColor"
@@ -280,6 +319,36 @@ final class GameEngine: ObservableObject {
         loadBestScore()
         loadStatistics()
         loadSettings()
+        initializeParticlePool()
+    }
+    
+    // MARK: - Particle Pool
+    
+    private func initializeParticlePool() {
+        particlePool.removeAll()
+        for _ in 0..<maxPoolSize {
+            let particle = Particle(
+                x: 0, y: 0, vx: 0, vy: 0,
+                size: 6, color: .white,
+                opacity: 0, lifetime: 0.5,
+                isPooled: true
+            )
+            particlePool.append(particle)
+        }
+    }
+    
+    private func getParticleFromPool() -> Particle? {
+        return particlePool.popLast()
+    }
+    
+    private func returnParticleToPool(_ particle: Particle) {
+        if particlePool.count < maxPoolSize {
+            var pooledParticle = particle
+            pooledParticle.isPooled = true
+            pooledParticle.opacity = 0
+            pooledParticle.age = 0
+            particlePool.append(pooledParticle)
+        }
     }
 
     // MARK: - Setup
@@ -322,6 +391,8 @@ final class GameEngine: ObservableObject {
         obstacles.removeAll()
         powerups.removeAll()
         particles.removeAll()
+        trailParticles.removeAll()
+        trailSpawnCooldown = 0
         
         // Reset lives based on game mode
         lives = settings.selectedMode == .hardcore ? 1 : GameConstants.maxLives
@@ -408,6 +479,9 @@ final class GameEngine: ObservableObject {
         totalGamesPlayed += 1
         totalCoinsCollected += coinsCollected
         saveStatistics()
+        
+        // Check achievements
+        checkAchievements()
 
         spawnExplosion(at: player.x, y: player.y, color: won ? .green : .white, count: 20)
         haptic(.heavy)
@@ -421,6 +495,7 @@ final class GameEngine: ObservableObject {
         obstacles.removeAll()
         powerups.removeAll()
         particles.removeAll()
+        trailParticles.removeAll()
         combo = 0
         lives = GameConstants.maxLives
     }
@@ -535,6 +610,18 @@ final class GameEngine: ObservableObject {
 
         // 10) Update particles
         updateParticles(dt: dt)
+        
+        // 10.5) Spawn and update trail particles
+        updateTrailParticles(dt: dt)
+        spawnTrailParticles(dt: dt)
+        
+        // 10.6) Spawn powerup aura particles
+        spawnPowerupAuraParticles(dt: dt)
+        
+        // 10.7) Spawn combo effects
+        if combo >= 5 {
+            spawnComboEffects(dt: dt)
+        }
 
         // 11) Remove off-screen obstacles
         let before = obstacles.count
@@ -542,6 +629,7 @@ final class GameEngine: ObservableObject {
         let removed = before - obstacles.count
         if removed > 0 {
             score += removed * GameConstants.scorePerDodge
+            totalObstaclesDodged += removed
         }
 
         // 12) Remove off-screen powerups
@@ -857,27 +945,57 @@ final class GameEngine: ObservableObject {
     // MARK: - Particles
 
     private func spawnExplosion(at x: CGFloat, y: CGFloat, color: Color, count: Int) {
-        // Limit total particles to prevent performance issues
-        let futureCount = particles.count + count
-        if futureCount > GameConstants.maxParticles {
-            let toRemove = futureCount - GameConstants.maxParticles
-            particles.removeFirst(toRemove)
-        }
+        // Use object pooling when available
+        var particlesAdded = 0
         
         for _ in 0..<count {
             let angle = CGFloat.random(in: 0...(2 * .pi))
             let speed = CGFloat.random(in: 50...150)
-            let particle = Particle(
-                x: x,
-                y: y,
-                vx: cos(angle) * speed,
-                vy: sin(angle) * speed,
-                size: CGFloat.random(in: 4...10),
-                color: color,
-                opacity: 1.0,
-                lifetime: Double.random(in: 0.3...0.6)
-            )
-            particles.append(particle)
+            
+            // Apply particle effect pack theme
+            let particleColor = themeManager.selectedParticleEffectPack.particleColor(baseColor: color)
+            
+            if let pooledParticle = getParticleFromPool() {
+                var particle = pooledParticle
+                particle.x = x
+                particle.y = y
+                particle.vx = cos(angle) * speed
+                particle.vy = sin(angle) * speed
+                particle.size = CGFloat.random(in: 4...10)
+                particle.color = particleColor
+                particle.opacity = 1.0
+                particle.lifetime = Double.random(in: 0.3...0.6)
+                particle.age = 0
+                particle.type = .explosion
+                particle.isPooled = false
+                particles.append(particle)
+                particlesAdded += 1
+            } else if particles.count < GameConstants.maxParticles {
+                // Create new particle if pool is empty
+                let particle = Particle(
+                    x: x,
+                    y: y,
+                    vx: cos(angle) * speed,
+                    vy: sin(angle) * speed,
+                    size: CGFloat.random(in: 4...10),
+                    color: particleColor,
+                    opacity: 1.0,
+                    lifetime: Double.random(in: 0.3...0.6),
+                    type: .explosion
+                )
+                particles.append(particle)
+                particlesAdded += 1
+            }
+        }
+        
+        // If too many particles, remove oldest ones
+        if particles.count > GameConstants.maxParticles {
+            let toRemove = particles.count - GameConstants.maxParticles
+            let removed = particles.prefix(toRemove)
+            for particle in removed {
+                returnParticleToPool(particle)
+            }
+            particles.removeFirst(toRemove)
         }
     }
 
@@ -887,10 +1005,153 @@ final class GameEngine: ObservableObject {
             particles[i].y += particles[i].vy * CGFloat(dt)
             particles[i].age += dt
             particles[i].opacity = max(0, 1 - particles[i].age / particles[i].lifetime)
-            particles[i].vy += 200 * CGFloat(dt)
+            
+            // Add gravity only to explosion particles
+            if particles[i].type == .explosion {
+                particles[i].vy += 200 * CGFloat(dt)
+            }
         }
 
-        particles.removeAll { $0.age >= $0.lifetime }
+        // Return expired particles to pool and remove them
+        for i in particles.indices.reversed() {
+            if particles[i].age >= particles[i].lifetime {
+                let particle = particles[i]
+                returnParticleToPool(particle)
+                particles.remove(at: i)
+            }
+        }
+    }
+    
+    // MARK: - Trail Particles
+    
+    private func spawnTrailParticles(dt: Double) {
+        // Trail particles are spawned when:
+        // 1. A trail effect is selected (diamond, rainbow, fire) OR
+        // 2. Speed boost is active (shows green trail for visual feedback)
+        guard themeManager.selectedTrailEffect != .none || hasSpeedBoost else { return }
+        
+        trailSpawnCooldown -= dt
+        if trailSpawnCooldown <= 0 {
+            trailSpawnCooldown = hasSpeedBoost ? trailSpawnInterval * 0.5 : trailSpawnInterval
+            
+            // Determine trail color based on effect
+            let trailColor: Color
+            switch themeManager.selectedTrailEffect {
+            case .none:
+                trailColor = hasSpeedBoost ? .green : currentPlayerColor
+            case .diamond:
+                trailColor = .cyan
+            case .rainbow:
+                trailColor = GameConstants.rainbowColors.randomElement() ?? .white
+            case .fire:
+                trailColor = ParticleEffectPack.fireColors.randomElement() ?? .orange
+            }
+            
+            let trail = TrailParticle(
+                x: player.x,
+                y: player.y,
+                opacity: 0.6,
+                size: player.radius * (hasSpeedBoost ? 1.2 : 0.8),
+                color: trailColor,
+                lifetime: hasSpeedBoost ? 0.4 : 0.5
+            )
+            trailParticles.append(trail)
+            
+            // Limit trail particles
+            if trailParticles.count > 30 {
+                trailParticles.removeFirst()
+            }
+        }
+    }
+    
+    private func updateTrailParticles(dt: Double) {
+        for i in trailParticles.indices.reversed() {
+            trailParticles[i].age += dt
+            let progress = trailParticles[i].age / trailParticles[i].lifetime
+            trailParticles[i].opacity = max(0, 0.6 * (1 - progress))
+        }
+        
+        trailParticles.removeAll { $0.age >= $0.lifetime }
+    }
+    
+    // MARK: - Powerup Aura Particles
+    
+    private func spawnPowerupAuraParticles(dt: Double) {
+        // Spawn pulsing aura particles around player when powerups are active
+        let activePowerups: [(Bool, Color, Double)] = [
+            (hasShield, .cyan, shieldTimeRemaining),
+            (hasSlowMo, .orange, slowMoTimeRemaining),
+            (hasMagnet, .purple, magnetTimeRemaining),
+            (hasSpeedBoost, .green, speedBoostTimeRemaining),
+            (hasFreeze, .blue, freezeTimeRemaining)
+        ]
+        
+        for (isActive, color, _) in activePowerups where isActive {
+            // Spawn aura particles occasionally
+            if Double.random(in: 0...1) < dt * 8 {
+                let angle = CGFloat.random(in: 0...(2 * .pi))
+                let distance = player.radius + CGFloat.random(in: 15...25)
+                let x = player.x + cos(angle) * distance
+                let y = player.y + sin(angle) * distance
+                
+                if let pooledParticle = getParticleFromPool() {
+                    var particle = pooledParticle
+                    particle.x = x
+                    particle.y = y
+                    particle.vx = cos(angle) * 20
+                    particle.vy = sin(angle) * 20
+                    particle.size = CGFloat.random(in: 3...6)
+                    particle.color = color
+                    particle.opacity = 0.7
+                    particle.lifetime = 0.6
+                    particle.age = 0
+                    particle.type = .powerupAura
+                    particle.isPooled = false
+                    particles.append(particle)
+                } else if particles.count < GameConstants.maxParticles {
+                    let particle = Particle(
+                        x: x,
+                        y: y,
+                        vx: cos(angle) * 20,
+                        vy: sin(angle) * 20,
+                        size: CGFloat.random(in: 3...6),
+                        color: color,
+                        opacity: 0.7,
+                        lifetime: 0.6,
+                        type: .powerupAura
+                    )
+                    particles.append(particle)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Combo Effects
+    
+    private func spawnComboEffects(dt: Double) {
+        // Spawn rainbow particles at screen edges for high combos
+        if Double.random(in: 0...1) < dt * Double(combo) {
+            let isLeftSide = Bool.random()
+            let x = isLeftSide ? CGFloat.random(in: 0...30) : worldWidth - CGFloat.random(in: 0...30)
+            let y = CGFloat.random(in: 0...worldHeight)
+            let rainbowColor: Color = GameConstants.rainbowColors.randomElement() ?? .white
+            
+            if let pooledParticle = getParticleFromPool() {
+                var particle = pooledParticle
+                particle.x = x
+                particle.y = y
+                particle.vx = 0
+                particle.vy = CGFloat.random(in: -50...50)
+                particle.size = CGFloat.random(in: 6...12)
+                particle.color = rainbowColor
+                particle.opacity = 0.8
+                particle.lifetime = 0.8
+                particle.age = 0
+                particle.type = .explosion
+                particle.isPooled = false
+                particles.append(particle)
+            }
+        }
     }
 
     // MARK: - Persistence
@@ -906,11 +1167,13 @@ final class GameEngine: ObservableObject {
     private func loadStatistics() {
         totalGamesPlayed = UserDefaults.standard.integer(forKey: totalGamesKey)
         totalCoinsCollected = UserDefaults.standard.integer(forKey: totalCoinsKey)
+        totalObstaclesDodged = UserDefaults.standard.integer(forKey: totalObstaclesDodgedKey)
     }
 
     private func saveStatistics() {
         UserDefaults.standard.set(totalGamesPlayed, forKey: totalGamesKey)
         UserDefaults.standard.set(totalCoinsCollected, forKey: totalCoinsKey)
+        UserDefaults.standard.set(totalObstaclesDodged, forKey: totalObstaclesDodgedKey)
     }
     
     private func loadSettings() {
@@ -932,14 +1195,67 @@ final class GameEngine: ObservableObject {
     
     // MARK: - Unlockables
     
+    // MARK: - Achievements
+    
+    private func checkAchievements() {
+        for achievement in Achievement.allCases {
+            let wasUnlocked = themeManager.checkAndUnlockAchievement(
+                achievement,
+                totalObstaclesDodged: totalObstaclesDodged,
+                totalCoins: totalCoinsCollected,
+                highestScore: bestScore
+            )
+            
+            if wasUnlocked {
+                newlyUnlockedAchievement = achievement
+                showMilestoneNotification("🏆 \(achievement.rawValue) Unlocked!")
+                
+                // Auto-unlock achievement colors
+                switch achievement.reward {
+                case .playerColor(let colorIndex):
+                    unlockedColors.insert(colorIndex)
+                    saveSettings()
+                default:
+                    break
+                }
+            }
+        }
+    }
+    
     func canAffordColor(index: Int) -> Bool {
-        guard index < GameSettings.playerColorCosts.count else { return false }
-        return totalCoinsCollected >= GameSettings.playerColorCosts[index]
+        // Check if it's within extended color range
+        guard index < ThemeManager.extendedPlayerColors.count else { return false }
+        
+        // Check if already unlocked
+        if unlockedColors.contains(index) { return true }
+        
+        // Check if unlocked by achievement
+        if themeManager.isColorUnlockedByAchievement(index) { return true }
+        
+        // Check if can afford to unlock
+        guard index < ThemeManager.extendedPlayerColorCosts.count else { return false }
+        let cost = ThemeManager.extendedPlayerColorCosts[index]
+        return cost == 0 || totalCoinsCollected >= cost
     }
     
     func unlockColor(index: Int) -> Bool {
-        guard canAffordColor(index: index) && !unlockedColors.contains(index) else { return false }
-        totalCoinsCollected -= GameSettings.playerColorCosts[index]
+        guard index < ThemeManager.extendedPlayerColors.count else { return false }
+        guard !unlockedColors.contains(index) else { return false }
+        
+        // Check if unlocked by achievement (free)
+        if themeManager.isColorUnlockedByAchievement(index) {
+            unlockedColors.insert(index)
+            saveSettings()
+            haptic(.medium)
+            return true
+        }
+        
+        // Check if can afford
+        guard index < ThemeManager.extendedPlayerColorCosts.count else { return false }
+        let cost = ThemeManager.extendedPlayerColorCosts[index]
+        guard totalCoinsCollected >= cost else { return false }
+        
+        totalCoinsCollected -= cost
         unlockedColors.insert(index)
         saveStatistics()
         saveSettings()
@@ -948,15 +1264,15 @@ final class GameEngine: ObservableObject {
     }
     
     func selectColor(index: Int) {
-        guard unlockedColors.contains(index) else { return }
+        guard unlockedColors.contains(index) || themeManager.isColorUnlockedByAchievement(index) else { return }
         settings.playerColorIndex = index
         saveSettings()
     }
     
     var currentPlayerColor: Color {
         let index = settings.playerColorIndex
-        guard index < GameSettings.playerColors.count else { return .white }
-        return GameSettings.playerColors[index]
+        guard index < ThemeManager.extendedPlayerColors.count else { return .white }
+        return ThemeManager.extendedPlayerColors[index]
     }
 
     // MARK: - Haptics

@@ -11,7 +11,7 @@ struct PlayerColorGrid: View {
                 .foregroundStyle(.white.opacity(0.8))
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 70))], spacing: 10) {
-                ForEach(0..<GameSettings.playerColors.count, id: \.self) { index in
+                ForEach(0..<ThemeManager.extendedPlayerColors.count, id: \.self) { index in
                     ColorButton(
                         index: index,
                         engine: engine
@@ -48,19 +48,19 @@ struct ColorButton: View {
     @ObservedObject var engine: GameEngine
     
     private var color: Color {
-        GameSettings.playerColors[index]
+        ThemeManager.extendedPlayerColors[index]
     }
     
     private var name: String {
-        GameSettings.playerColorNames[index]
+        ThemeManager.extendedPlayerColorNames[index]
     }
     
     private var cost: Int {
-        GameSettings.playerColorCosts[index]
+        ThemeManager.extendedPlayerColorCosts[index]
     }
     
     private var isUnlocked: Bool {
-        engine.unlockedColors.contains(index)
+        engine.unlockedColors.contains(index) || engine.themeManager.isColorUnlockedByAchievement(index)
     }
     
     private var isSelected: Bool {
@@ -101,10 +101,17 @@ struct ColorButton: View {
     
     private var lockBadge: some View {
         HStack(spacing: 2) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 8))
-            Text("\(cost)")
-                .font(.caption2)
+            if engine.themeManager.isColorUnlockedByAchievement(index) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 8))
+                Text("Achievement")
+                    .font(.caption2)
+            } else {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 8))
+                Text("\(cost)")
+                    .font(.caption2)
+            }
         }
         .foregroundStyle(engine.canAffordColor(index: index) ? .yellow : .gray)
     }
