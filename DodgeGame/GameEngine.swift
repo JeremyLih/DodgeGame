@@ -112,6 +112,9 @@ final class GameEngine: ObservableObject {
     @Published var recentScoreIncrease: Int = 0
     @Published var showMilestone: Bool = false
     @Published var milestoneText: String = ""
+    
+    // Milestone tracking
+    private var lastScoreMilestone: Int = 0
 
     @Published var player: Player = Player(x: 0, y:  0, radius: 18)
     @Published var obstacles: [Obstacle] = []
@@ -224,6 +227,7 @@ final class GameEngine: ObservableObject {
         difficultyLevel = 0
         currentDifficultyLevel = 0
         difficultyJustIncreased = false
+        lastScoreMilestone = 0
         obstacleSpawnInterval = baseSpawnInterval
         powerupSpawnInterval = 2.5
         obstacleSpawnCooldown = 0
@@ -323,13 +327,10 @@ final class GameEngine: ObservableObject {
         gameTime += dt
 
         // 2) Score increases with time
-        let oldScore = score
         score += Int(dt * 10.0)
         
         // Check for score milestones
-        if score != oldScore {
-            checkScoreMilestone(currentScore: score)
-        }
+        checkScoreMilestone(currentScore: score)
 
         // 3) Update combo timer
         if combo > 0 {
@@ -625,7 +626,8 @@ final class GameEngine: ObservableObject {
     private func checkScoreMilestone(currentScore: Int) {
         let scoreMilestones = [100, 250, 500, 1000, 2500, 5000, 10000]
         for milestone in scoreMilestones {
-            if currentScore >= milestone && (currentScore - Int(10 * 0.016)) < milestone {
+            if currentScore >= milestone && lastScoreMilestone < milestone {
+                lastScoreMilestone = milestone
                 showMilestoneNotification("⭐ Score: \(milestone)!")
                 break
             }
@@ -647,8 +649,10 @@ final class GameEngine: ObservableObject {
     private func spawnExplosion(at x:  CGFloat, y: CGFloat, color: Color, count: Int) {
         // Limit total particles to prevent performance issues
         let maxParticles = 150
-        if particles.count > maxParticles {
-            particles.removeFirst(min(count, particles.count - maxParticles + count))
+        let futureCount = particles.count + count
+        if futureCount > maxParticles {
+            let toRemove = futureCount - maxParticles
+            particles.removeFirst(toRemove)
         }
         
         for _ in 0..<count {
