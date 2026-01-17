@@ -289,25 +289,104 @@ struct ContentView:  View {
         var body: some View {
             ZStack {
                 // Glow effect
-                Circle()
+                obstacleShape(for: obstacle.shape)
                     .fill((isFrozen ? Color.blue : theme.glowColor).opacity(0.3))
                     .frame(width: obstacle.radius * 2.5, height: obstacle.radius * 2.5)
                     .blur(radius: 8)
 
-                // Main obstacle with theme colors
-                Circle()
+                // Main obstacle with theme colors and characteristic color
+                let obstacleColor = isFrozen ? [.blue, .blue.opacity(0.7)] : 
+                                    (obstacle.characteristic == .normal ? theme.colors : 
+                                     [obstacle.characteristic.color, obstacle.characteristic.color.opacity(0.7)])
+                
+                obstacleShape(for: obstacle.shape)
                     .fill(
                         RadialGradient(
-                            colors: isFrozen ? [.blue, .blue.opacity(0.7)] : theme.colors,
+                            colors: obstacleColor,
                             center: .topLeading,
                             startRadius: 0,
                             endRadius: obstacle.radius * 2
                         )
                     )
                     .frame(width: obstacle.radius * 2, height: obstacle.radius * 2)
-                    .shadow(color: (isFrozen ? Color.blue : theme.glowColor).opacity(0.5), radius: 6, y: 3)
+                    .shadow(color: (isFrozen ? Color.blue : (obstacle.characteristic == .normal ? theme.glowColor : obstacle.characteristic.color)).opacity(0.5), radius: 6, y: 3)
+                
+                // Add icon for special characteristics
+                if obstacle.characteristic != .normal {
+                    characteristicIcon(for: obstacle.characteristic)
+                        .font(.system(size: obstacle.radius * 0.8, weight: .bold))
+                        .foregroundColor(.white.opacity(0.8))
+                }
             }
             .position(x: obstacle.x, y: obstacle.y)
+        }
+        
+        @ViewBuilder
+        private func obstacleShape(for shape: ObstacleShape) -> some Shape {
+            switch shape {
+            case .circle:
+                Circle()
+            case .triangle:
+                TriangleShape()
+            case .square:
+                Rectangle()
+            case .star:
+                StarShape()
+            }
+        }
+        
+        @ViewBuilder
+        private func characteristicIcon(for characteristic: ObstacleCharacteristic) -> some View {
+            switch characteristic {
+            case .destructible:
+                Image(systemName: "xmark.circle.fill")
+            case .splitting:
+                Image(systemName: "arrow.triangle.branch")
+            case .explosive:
+                Image(systemName: "flame.fill")
+            case .normal:
+                EmptyView()
+            }
+        }
+    }
+    
+    // MARK: - Custom Shapes
+    
+    struct TriangleShape: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+            return path
+        }
+    }
+    
+    struct StarShape: Shape {
+        func path(in rect: CGRect) -> Path {
+            let points = 5
+            let center = CGPoint(x: rect.midX, y: rect.midY)
+            let outerRadius = min(rect.width, rect.height) / 2
+            let innerRadius = outerRadius * 0.4
+            
+            var path = Path()
+            
+            for i in 0..<points * 2 {
+                let angle = CGFloat(i) * .pi / CGFloat(points) - .pi / 2
+                let radius = i % 2 == 0 ? outerRadius : innerRadius
+                let x = center.x + cos(angle) * radius
+                let y = center.y + sin(angle) * radius
+                
+                if i == 0 {
+                    path.move(to: CGPoint(x: x, y: y))
+                } else {
+                    path.addLine(to: CGPoint(x: x, y: y))
+                }
+            }
+            
+            path.closeSubpath()
+            return path
         }
     }
 
@@ -384,21 +463,58 @@ struct ContentView:  View {
     // MARK: - Active Powerups Bar
 
     private var activePowerupsBar: some View {
-        HStack(spacing: 8) {
-            if engine.hasShield {
-                powerupTimer(icon: "shield.fill", color: .cyan, remaining: engine.shieldTimeRemaining)
+        VStack(spacing: 8) {
+            // Active combo indicator
+            if let combo = engine.activeCombo {
+                HStack(spacing: 6) {
+                    Image(systemName: "star.fill")
+                        .font(.caption.bold())
+                    Text(combo.rawValue)
+                        .font(.caption.bold())
+                    Text(combo.description)
+                        .font(.caption2)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    LinearGradient(
+                        colors: [.purple, .pink],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .opacity(0.8)
+                )
+                .clipShape(Capsule())
             }
-            if engine.hasSlowMo {
-                powerupTimer(icon: "clock.fill", color: .orange, remaining: engine.slowMoTimeRemaining)
+            
+            // Active powerups
+            HStack(spacing: 8) {
+                if engine.hasShield {
+                    powerupTimer(icon: "shield.fill", color: .cyan, remaining: engine.shieldTimeRemaining)
+                }
+                if engine.hasSlowMo {
+                    powerupTimer(icon: "clock.fill", color: .orange, remaining: engine.slowMoTimeRemaining)
+                }
+                if engine.hasMagnet {
+                    powerupTimer(icon: "magnet", color: .purple, remaining: engine.magnetTimeRemaining)
+                }
+                if engine.hasSpeedBoost {
+                    powerupTimer(icon: "bolt.fill", color: .green, remaining: engine.speedBoostTimeRemaining)
+                }
+                if engine.hasFreeze {
+                    powerupTimer(icon: "snowflake", color: .blue, remaining: engine.freezeTimeRemaining)
+                }
             }
-            if engine.hasMagnet {
-                powerupTimer(icon: "magnet", color: .purple, remaining: engine.magnetTimeRemaining)
-            }
-            if engine.hasSpeedBoost {
-                powerupTimer(icon: "bolt.fill", color: .green, remaining: engine.speedBoostTimeRemaining)
-            }
-            if engine.hasFreeze {
-                powerupTimer(icon: "snowflake", color: .blue, remaining: engine.freezeTimeRemaining)
+            
+            // Cooldown indicators
+            HStack(spacing: 8) {
+                if engine.freezeCooldownRemaining > 0 {
+                    cooldownTimer(icon: "snowflake", remaining: engine.freezeCooldownRemaining)
+                }
+                if engine.bombCooldownRemaining > 0 {
+                    cooldownTimer(icon: "flame.fill", remaining: engine.bombCooldownRemaining)
+                }
             }
         }
         .padding(.horizontal)
@@ -415,6 +531,20 @@ struct ContentView:  View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(color.opacity(0.7))
+        .clipShape(Capsule())
+    }
+    
+    private func cooldownTimer(icon: String, remaining: Double) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2.bold())
+            Text(String(format: "%.0f", remaining))
+                .font(.caption2.monospacedDigit())
+        }
+        .foregroundColor(.white.opacity(0.6))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.gray.opacity(0.5))
         .clipShape(Capsule())
     }
 
