@@ -619,13 +619,13 @@ final class GameEngine: ObservableObject {
     
     // MARK: - Milestone System
     
-    // Track which coin milestones have been achieved
-    private let coinMilestones: Set<Int> = [10, 25, 50, 100, 250, 500]
+    // Define milestone thresholds as static constants
+    private static let coinMilestones: Set<Int> = [10, 25, 50, 100, 250, 500]
     private static let scoreMilestones: [Int] = [100, 250, 500, 1000, 2500, 5000, 10000]
     
     private func checkMilestone(coins: Int) {
         // Check if we just hit a milestone and haven't achieved it yet this game
-        if coinMilestones.contains(coins) && !achievedCoinMilestones.contains(coins) {
+        if Self.coinMilestones.contains(coins) && !achievedCoinMilestones.contains(coins) {
             achievedCoinMilestones.insert(coins)
             showMilestoneNotification("🎯 \(coins) Coins Collected!")
         }
