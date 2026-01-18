@@ -1170,7 +1170,7 @@ final class GameEngine: ObservableObject {
         totalObstaclesDodged = UserDefaults.standard.integer(forKey: totalObstaclesDodgedKey)
     }
 
-    private func saveStatistics() {
+    func saveStatistics() {
         UserDefaults.standard.set(totalGamesPlayed, forKey: totalGamesKey)
         UserDefaults.standard.set(totalCoinsCollected, forKey: totalCoinsKey)
         UserDefaults.standard.set(totalObstaclesDodged, forKey: totalObstaclesDodgedKey)
