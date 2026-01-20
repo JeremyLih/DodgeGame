@@ -51,6 +51,9 @@ enum GameConstants {
     
     // Game modes
     static let timeAttackDurations: [Int] = [60, 90, 120]
+    
+    // Developer Mode
+    static let developerModeTapCount: Int = 6
 }
 
 // MARK: - Game Mode
@@ -234,6 +237,12 @@ final class GameEngine: ObservableObject {
     // Lives system
     @Published var lives: Int = GameConstants.maxLives
     @Published var showSettings: Bool = false
+    
+    // Developer Mode
+    @Published var developerModeVisible: Bool = false
+    @Published var developerModeUnlocked: Bool = false
+    var titleTapCount: Int = 0
+    private let developerModePassword = "670"
     
     // Settings
     @Published var settings: GameSettings = GameSettings()
@@ -1273,6 +1282,50 @@ final class GameEngine: ObservableObject {
         let index = settings.playerColorIndex
         guard index < ThemeManager.extendedPlayerColors.count else { return .white }
         return ThemeManager.extendedPlayerColors[index]
+    }
+
+    // MARK: - Developer Mode
+    
+    func handleTitleTap() {
+        titleTapCount += 1
+        
+        // Enable developer mode after reaching the required tap count
+        if titleTapCount >= GameConstants.developerModeTapCount && !developerModeVisible {
+            developerModeVisible = true
+            haptic(.medium)
+        }
+    }
+    
+    func validateDeveloperPassword(_ password: String) -> Bool {
+        // Note: Password is intentionally stored as plain text for this developer/cheat feature
+        // This is acceptable for a local game feature that doesn't protect sensitive data
+        if password == developerModePassword {
+            developerModeUnlocked = true
+            unlockAllContent()
+            haptic(.heavy)
+            return true
+        }
+        return false
+    }
+    
+    private func unlockAllContent() {
+        // Unlock all player colors
+        for i in 0..<ThemeManager.extendedPlayerColors.count {
+            unlockedColors.insert(i)
+        }
+        
+        // Unlock all themes
+        themeManager.unlockedObstacleThemes = Set(ObstacleTheme.allCases)
+        themeManager.unlockedBackgroundThemes = Set(BackgroundTheme.allCases)
+        themeManager.unlockedParticleEffectPacks = Set(ParticleEffectPack.allCases)
+        themeManager.unlockedTrailEffects = Set(TrailEffect.allCases)
+        
+        // Unlock all achievements
+        themeManager.unlockedAchievements = Set(Achievement.allCases)
+        
+        // Save everything
+        saveSettings()
+        themeManager.saveSettings()
     }
 
     // MARK: - Haptics

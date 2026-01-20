@@ -613,6 +613,11 @@ struct ContentView:  View {
                 // Title with glow effect
                 titleText
                 
+                // Developer Mode Section
+                if engine.developerModeVisible {
+                    developerModeSection
+                }
+                
                 // Game Mode Selector with glass effect
                 GameModeSelector(engine: engine)
                 
@@ -651,6 +656,88 @@ struct ContentView:  View {
             )
             .shadow(color: .cyan.opacity(0.5), radius: 10)
             .padding(.top, 4)
+            .onTapGesture {
+                engine.handleTitleTap()
+            }
+    }
+    
+    // MARK: - Developer Mode Section
+    
+    @State private var developerPassword: String = ""
+    @State private var showPasswordError: Bool = false
+    private let errorDisplayDuration: TimeInterval = 2.0
+    
+    private var developerModeSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "wrench.and.screwdriver.fill")
+                    .foregroundColor(.orange)
+                Text("Developer Mode")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+            }
+            
+            if !engine.developerModeUnlocked {
+                VStack(spacing: 10) {
+                    TextField("Enter password", text: $developerPassword)
+                        .textFieldStyle(.roundedBorder)
+                        .multilineTextAlignment(.center)
+                        .keyboardType(.numberPad)
+                        .frame(maxWidth: 200)
+                    
+                    Button {
+                        if engine.validateDeveloperPassword(developerPassword) {
+                            showPasswordError = false
+                        } else {
+                            showPasswordError = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + errorDisplayDuration) {
+                                showPasswordError = false
+                            }
+                        }
+                    } label: {
+                        Text("Unlock")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.black)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 20)
+                            .background(
+                                LinearGradient(
+                                    colors: [.orange, .orange.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    
+                    if showPasswordError {
+                        Text("❌ Incorrect password")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("All content unlocked!")
+                        .font(.subheadline)
+                        .foregroundColor(.green)
+                }
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.orange.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                )
+        )
+        .transition(.scale.combined(with: .opacity))
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: engine.developerModeVisible)
     }
     
     private var actionButtons: some View {
