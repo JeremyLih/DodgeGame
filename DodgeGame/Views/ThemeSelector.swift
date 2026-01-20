@@ -3,6 +3,12 @@ import SwiftUI
 /// Theme selection component for customizing game appearance
 struct ThemeSelector: View {
     @ObservedObject var engine: GameEngine
+    @ObservedObject var themeManager: ThemeManager
+    
+    init(engine: GameEngine) {
+        self.engine = engine
+        self.themeManager = engine.themeManager
+    }
     
     var body: some View {
         VStack(spacing: 14) {
@@ -10,20 +16,18 @@ struct ThemeSelector: View {
             ThemeSection(
                 title: "Obstacle Skins",
                 items: ObstacleTheme.allCases,
-                isSelected: { theme in
-                    engine.themeManager.selectedObstacleTheme == theme
-                },
-                unlockedItems: engine.themeManager.unlockedObstacleThemes,
+                selectedItem: themeManager.selectedObstacleTheme,
+                unlockedItems: themeManager.unlockedObstacleThemes,
                 totalCoins: engine.totalCoinsCollected,
                 onSelect: { theme in
-                    engine.themeManager.select(theme)
+                    themeManager.select(theme)
                 },
                 onUnlock: { theme in
-                    _ = engine.themeManager.unlock(theme, totalCoins: &engine.totalCoinsCollected)
+                    _ = themeManager.unlock(theme, totalCoins: &engine.totalCoinsCollected)
                     engine.saveStatistics()
                 },
                 canUnlock: { theme in
-                    engine.themeManager.canUnlock(theme, totalCoins: engine.totalCoinsCollected)
+                    themeManager.canUnlock(theme, totalCoins: engine.totalCoinsCollected)
                 }
             )
             
@@ -31,20 +35,18 @@ struct ThemeSelector: View {
             ThemeSection(
                 title: "Background Themes",
                 items: BackgroundTheme.allCases,
-                isSelected: { theme in
-                    engine.themeManager.selectedBackgroundTheme == theme
-                },
-                unlockedItems: engine.themeManager.unlockedBackgroundThemes,
+                selectedItem: themeManager.selectedBackgroundTheme,
+                unlockedItems: themeManager.unlockedBackgroundThemes,
                 totalCoins: engine.totalCoinsCollected,
                 onSelect: { theme in
-                    engine.themeManager.select(theme)
+                    themeManager.select(theme)
                 },
                 onUnlock: { theme in
-                    _ = engine.themeManager.unlock(theme, totalCoins: &engine.totalCoinsCollected)
+                    _ = themeManager.unlock(theme, totalCoins: &engine.totalCoinsCollected)
                     engine.saveStatistics()
                 },
                 canUnlock: { theme in
-                    engine.themeManager.canUnlock(theme, totalCoins: engine.totalCoinsCollected)
+                    themeManager.canUnlock(theme, totalCoins: engine.totalCoinsCollected)
                 }
             )
             
@@ -52,25 +54,23 @@ struct ThemeSelector: View {
             ThemeSection(
                 title: "Particle Effects",
                 items: ParticleEffectPack.allCases,
-                isSelected: { pack in
-                    engine.themeManager.selectedParticleEffectPack == pack
-                },
-                unlockedItems: engine.themeManager.unlockedParticleEffectPacks,
+                selectedItem: themeManager.selectedParticleEffectPack,
+                unlockedItems: themeManager.unlockedParticleEffectPacks,
                 totalCoins: engine.totalCoinsCollected,
                 onSelect: { pack in
-                    engine.themeManager.select(pack)
+                    themeManager.select(pack)
                 },
                 onUnlock: { pack in
-                    _ = engine.themeManager.unlock(pack, totalCoins: &engine.totalCoinsCollected)
+                    _ = themeManager.unlock(pack, totalCoins: &engine.totalCoinsCollected)
                     engine.saveStatistics()
                 },
                 canUnlock: { pack in
-                    engine.themeManager.canUnlock(pack, totalCoins: engine.totalCoinsCollected)
+                    themeManager.canUnlock(pack, totalCoins: engine.totalCoinsCollected)
                 }
             )
             
             // Trail effects
-            TrailEffectSection(engine: engine)
+            TrailEffectSection(themeManager: themeManager)
         }
     }
 }
@@ -79,7 +79,7 @@ struct ThemeSelector: View {
 struct ThemeSection<T: RawRepresentable & Hashable & CaseIterable & Identifiable>: View where T.RawValue == String {
     let title: String
     let items: [T]
-    let isSelected: (T) -> Bool
+    let selectedItem: T
     let unlockedItems: Set<T>
     let totalCoins: Int
     let onSelect: (T) -> Void
@@ -97,7 +97,7 @@ struct ThemeSection<T: RawRepresentable & Hashable & CaseIterable & Identifiable
                 ForEach(items) { item in
                     ThemeButton(
                         item: item,
-                        isSelected: isSelected(item),
+                        isSelected: selectedItem == item,
                         isUnlocked: unlockedItems.contains(item),
                         canUnlock: canUnlock(item),
                         totalCoins: totalCoins,
@@ -202,7 +202,7 @@ struct ThemeButton<T: RawRepresentable & Hashable>: View where T.RawValue == Str
 
 /// Trail effect selection section
 struct TrailEffectSection: View {
-    @ObservedObject var engine: GameEngine
+    @ObservedObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(spacing: 10) {
@@ -215,10 +215,10 @@ struct TrailEffectSection: View {
                 ForEach(TrailEffect.allCases, id: \.self) { effect in
                     TrailEffectButton(
                         effect: effect,
-                        isSelected: engine.themeManager.selectedTrailEffect == effect,
-                        isUnlocked: engine.themeManager.unlockedTrailEffects.contains(effect),
+                        isSelected: themeManager.selectedTrailEffect == effect,
+                        isUnlocked: themeManager.unlockedTrailEffects.contains(effect),
                         onSelect: {
-                            engine.themeManager.select(effect)
+                            themeManager.select(effect)
                         }
                     )
                 }
