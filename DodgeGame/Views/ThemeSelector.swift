@@ -10,7 +10,9 @@ struct ThemeSelector: View {
             ThemeSection(
                 title: "Obstacle Skins",
                 items: ObstacleTheme.allCases,
-                selectedItem: engine.themeManager.selectedObstacleTheme,
+                isSelected: { theme in
+                    engine.themeManager.selectedObstacleTheme == theme
+                },
                 unlockedItems: engine.themeManager.unlockedObstacleThemes,
                 totalCoins: engine.totalCoinsCollected,
                 onSelect: { theme in
@@ -29,7 +31,9 @@ struct ThemeSelector: View {
             ThemeSection(
                 title: "Background Themes",
                 items: BackgroundTheme.allCases,
-                selectedItem: engine.themeManager.selectedBackgroundTheme,
+                isSelected: { theme in
+                    engine.themeManager.selectedBackgroundTheme == theme
+                },
                 unlockedItems: engine.themeManager.unlockedBackgroundThemes,
                 totalCoins: engine.totalCoinsCollected,
                 onSelect: { theme in
@@ -48,7 +52,9 @@ struct ThemeSelector: View {
             ThemeSection(
                 title: "Particle Effects",
                 items: ParticleEffectPack.allCases,
-                selectedItem: engine.themeManager.selectedParticleEffectPack,
+                isSelected: { pack in
+                    engine.themeManager.selectedParticleEffectPack == pack
+                },
                 unlockedItems: engine.themeManager.unlockedParticleEffectPacks,
                 totalCoins: engine.totalCoinsCollected,
                 onSelect: { pack in
@@ -73,7 +79,7 @@ struct ThemeSelector: View {
 struct ThemeSection<T: RawRepresentable & Hashable & CaseIterable & Identifiable>: View where T.RawValue == String {
     let title: String
     let items: [T]
-    let selectedItem: T
+    let isSelected: (T) -> Bool
     let unlockedItems: Set<T>
     let totalCoins: Int
     let onSelect: (T) -> Void
@@ -91,7 +97,7 @@ struct ThemeSection<T: RawRepresentable & Hashable & CaseIterable & Identifiable
                 ForEach(items) { item in
                     ThemeButton(
                         item: item,
-                        isSelected: selectedItem == item,
+                        isSelected: isSelected(item),
                         isUnlocked: unlockedItems.contains(item),
                         canUnlock: canUnlock(item),
                         totalCoins: totalCoins,
