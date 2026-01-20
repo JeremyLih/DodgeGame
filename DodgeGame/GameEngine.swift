@@ -51,6 +51,9 @@ enum GameConstants {
     
     // Game modes
     static let timeAttackDurations: [Int] = [60, 90, 120]
+    
+    // Developer Mode
+    static let developerModeTapCount: Int = 6
 }
 
 // MARK: - Game Mode
@@ -1286,8 +1289,8 @@ final class GameEngine: ObservableObject {
     func handleTitleTap() {
         titleTapCount += 1
         
-        // Enable developer mode after 6 or more taps
-        if titleTapCount >= 6 && !developerModeVisible {
+        // Enable developer mode after reaching the required tap count
+        if titleTapCount >= GameConstants.developerModeTapCount && !developerModeVisible {
             developerModeVisible = true
             haptic(.medium)
         }
