@@ -665,6 +665,7 @@ struct ContentView:  View {
     
     @State private var developerPassword: String = ""
     @State private var showPasswordError: Bool = false
+    private let errorDisplayDuration: TimeInterval = 2.0
     
     private var developerModeSection: some View {
         VStack(spacing: 12) {
@@ -689,7 +690,7 @@ struct ContentView:  View {
                             showPasswordError = false
                         } else {
                             showPasswordError = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + errorDisplayDuration) {
                                 showPasswordError = false
                             }
                         }

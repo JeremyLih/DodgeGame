@@ -239,6 +239,7 @@ final class GameEngine: ObservableObject {
     @Published var developerModeVisible: Bool = false
     @Published var developerModeUnlocked: Bool = false
     var titleTapCount: Int = 0
+    private let developerModePassword = "670"
     
     // Settings
     @Published var settings: GameSettings = GameSettings()
@@ -1285,7 +1286,7 @@ final class GameEngine: ObservableObject {
     func handleTitleTap() {
         titleTapCount += 1
         
-        // Enable developer mode after 6 taps
+        // Enable developer mode after 6 or more taps
         if titleTapCount >= 6 && !developerModeVisible {
             developerModeVisible = true
             haptic(.medium)
@@ -1295,7 +1296,7 @@ final class GameEngine: ObservableObject {
     func validateDeveloperPassword(_ password: String) -> Bool {
         // Note: Password is intentionally stored as plain text for this developer/cheat feature
         // This is acceptable for a local game feature that doesn't protect sensitive data
-        if password == "670" {
+        if password == developerModePassword {
             developerModeUnlocked = true
             unlockAllContent()
             haptic(.heavy)
