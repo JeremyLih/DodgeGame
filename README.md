@@ -135,10 +135,17 @@ The game is carefully balanced to provide an engaging difficulty curve:
 
 ## 🚀 Getting Started
 
-1. Clone the repository
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/JeremyLih/DodgeGame.git
+   cd DodgeGame
+   ```
 2. Open `DodgeGame.xcodeproj` in Xcode
-3. Build and run on your iOS device or simulator
-4. Start dodging!
+3. Select your development team under **Signing & Capabilities** (the committed project ships with no team set, so you'll need to pick your own Apple ID / team to run on a physical device)
+4. Build and run on the iOS Simulator (`Cmd+R`) or a connected device
+5. Start dodging!
+
+> **Note:** This is a pure SwiftUI project with **no external dependencies** — no CocoaPods, Swift Package Manager, or Carthage setup required. Just clone and open in Xcode.
 
 ## 🏆 Tips for High Scores
 
@@ -200,7 +207,7 @@ Feel free to submit issues and enhancement requests!
 
 ## 📄 License
 
-This project is available for personal and educational use.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details. You're free to use, modify, and distribute it, including for personal and educational projects.
 
 ## 🎉 Enjoy!
 
